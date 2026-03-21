@@ -93,13 +93,7 @@ export const MOCK_SURVEY: SurveyQuestion[] = [
 
 export const MOCK_SOCIAL_OUTREACH: OutreachMessage = {
   tone: 'Casual & conversational',
-  message: `Hey everyone 👋 I'm exploring opening a cold-pressed juice bar in Plano — real ingredients, transparent sourcing, no franchise markup.
-
-Before I invest a single dollar, I want to hear from you: Would you actually want this? What's missing from the current options?
-
-I put together a quick 2-min survey — would love your honest thoughts: [survey link]
-
-Thanks 🙏`,
+  message: "Hey everyone! I am exploring opening a cold-pressed juice bar in Plano -- real ingredients, transparent sourcing, no franchise markup.\n\nBefore I invest a single dollar, I want to hear from you: Would you actually want this? What is missing from the current options?\n\nI put together a quick 2-min survey -- would love your honest thoughts: [survey link]\n\nThanks!",
 };
 
 export const MOCK_MARKETPLACE: MarketplaceListing = {
