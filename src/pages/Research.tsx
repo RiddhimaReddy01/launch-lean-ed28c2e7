@@ -11,10 +11,11 @@ const STEPS: { key: Step; label: string; placeholder: string }[] = [
   { key: 'validate', label: 'Validate', placeholder: 'Testing real demand...' },
 ];
 
-function StepperDot({ step, index, currentIndex }: { step: typeof STEPS[number]; index: number; currentIndex: number }) {
+function StepperDot({ step, index, currentIndex, onNavigate }: { step: typeof STEPS[number]; index: number; currentIndex: number; onNavigate: (step: Step) => void }) {
   const isActive = index === currentIndex;
   const isCompleted = index < currentIndex;
   const isFuture = index > currentIndex;
+  const isClickable = isCompleted || isActive;
 
   const dotColor = isCompleted
     ? 'var(--accent-purple)'
@@ -23,7 +24,11 @@ function StepperDot({ step, index, currentIndex }: { step: typeof STEPS[number];
       : 'var(--divider-light)';
 
   return (
-    <div className="flex flex-col items-center" style={{ opacity: isFuture ? 0.35 : 1, transition: 'opacity 300ms ease-out' }}>
+    <div
+      className="flex flex-col items-center"
+      style={{ opacity: isFuture ? 0.35 : 1, transition: 'opacity 300ms ease-out', cursor: isClickable ? 'pointer' : 'default' }}
+      onClick={() => isClickable && onNavigate(step.key)}
+    >
       <div
         style={{
           width: 10,
@@ -51,7 +56,7 @@ function StepperDot({ step, index, currentIndex }: { step: typeof STEPS[number];
 }
 
 export default function Research() {
-  const { idea, currentStep } = useIdea();
+  const { idea, currentStep, setCurrentStep } = useIdea();
   const navigate = useNavigate();
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -180,7 +185,7 @@ export default function Research() {
 
         <div className="relative flex items-start justify-between">
           {STEPS.map((step, i) => (
-            <StepperDot key={step.key} step={step} index={i} currentIndex={currentIndex} />
+            <StepperDot key={step.key} step={step} index={i} currentIndex={currentIndex} onNavigate={setCurrentStep} />
           ))}
         </div>
       </div>
