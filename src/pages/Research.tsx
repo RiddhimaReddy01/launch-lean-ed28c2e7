@@ -185,7 +185,7 @@ export default function Research() {
 
         <div className="relative flex items-start justify-between">
           {STEPS.map((step, i) => (
-            <StepperDot key={step.key} step={step} index={i} currentIndex={currentIndex} />
+            <StepperDot key={step.key} step={step} index={i} currentIndex={currentIndex} onNavigate={setCurrentStep} />
           ))}
         </div>
       </div>
