@@ -10,10 +10,29 @@ import PlanSummary from './PlanSummary';
 
 type Estimate = 'low' | 'mid' | 'high';
 
+const TABS = [
+  { key: 'costs', label: 'Costs' },
+  { key: 'suppliers', label: 'Suppliers' },
+  { key: 'team', label: 'Team' },
+  { key: 'timeline', label: 'Timeline' },
+  { key: 'summary', label: 'Summary' },
+] as const;
+
+type TabKey = typeof TABS[number]['key'];
+
+const TAB_QUESTIONS: Record<TabKey, string> = {
+  costs: 'What will it cost to launch?',
+  suppliers: 'Who are the local partners?',
+  team: 'Who do you need to hire?',
+  timeline: 'How long will it take?',
+  summary: 'What does the full plan look like?',
+};
+
 export default function SetupModule() {
   const { idea, selectedInsight } = useIdea();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [activeTab, setActiveTab] = useState<TabKey>('costs');
   const [selectedTier, setSelectedTier] = useState('recommended');
   const [estimates, setEstimates] = useState<Record<string, Estimate>>({});
   const [includedRoles, setIncludedRoles] = useState<Set<string>>(new Set(['manager', 'barista']));
@@ -59,6 +78,49 @@ export default function SetupModule() {
 
   const insightTitle = selectedInsight || 'Existing juice bars are overpriced for basic smoothies';
 
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'costs':
+        return (
+          <CostBuilder
+            selectedTier={selectedTier}
+            onSelectTier={setSelectedTier}
+            estimates={estimates}
+            onEstimateChange={handleEstimateChange}
+          />
+        );
+      case 'suppliers':
+        return (
+          <div>
+            <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 16 }}>
+              SUPPLIERS & PARTNERS
+            </p>
+            <Suppliers />
+          </div>
+        );
+      case 'team':
+        return <TeamBuilder includedRoles={includedRoles} onToggleRole={handleToggleRole} />;
+      case 'timeline':
+        return (
+          <div>
+            <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 20 }}>
+              LAUNCH TIMELINE
+            </p>
+            <LaunchTimeline phases={phases} onToggleTask={handleToggleTask} />
+          </div>
+        );
+      case 'summary':
+        return (
+          <PlanSummary
+            selectedTier={selectedTier}
+            currentTotal={currentTotal}
+            includedRoles={includedRoles}
+            phases={phases}
+          />
+        );
+    }
+  };
+
   return (
     <div ref={containerRef} className="scroll-reveal" style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
       {/* Sticky context strip */}
@@ -94,7 +156,7 @@ export default function SetupModule() {
       </div>
 
       {/* Intro */}
-      <div className="mb-16">
+      <div className="mb-10">
         <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 10 }}>
           LAUNCH PLAN
         </p>
@@ -115,50 +177,70 @@ export default function SetupModule() {
         </p>
       </div>
 
-      {/* Cost Builder */}
-      <div className="mb-20">
-        <CostBuilder
-          selectedTier={selectedTier}
-          onSelectTier={setSelectedTier}
-          estimates={estimates}
-          onEstimateChange={handleEstimateChange}
-        />
-      </div>
+      {/* Tab switcher */}
+      <div className="mb-10">
+        <div
+          className="flex gap-1 overflow-x-auto hide-scrollbar pb-1"
+          style={{ borderBottom: '1px solid var(--divider)' }}
+        >
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className="relative px-4 py-3 transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  fontWeight: isActive ? 400 : 300,
+                  color: isActive ? 'var(--accent-purple)' : 'var(--text-muted)',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {tab.label}
+                {isActive && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: -1,
+                      left: 16,
+                      right: 16,
+                      height: 1.5,
+                      backgroundColor: 'var(--accent-purple)',
+                      borderRadius: 1,
+                    }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Suppliers */}
-      <div className="mb-20">
-        <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 16 }}>
-          SUPPLIERS & PARTNERS
+        {/* Tab question */}
+        <p
+          className="mt-6 mb-8"
+          style={{
+            fontFamily: "'Instrument Serif', serif",
+            fontSize: 18,
+            fontStyle: 'italic',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {TAB_QUESTIONS[activeTab]}
         </p>
-        <Suppliers />
       </div>
 
-      {/* Team Builder */}
-      <div className="mb-20">
-        <TeamBuilder includedRoles={includedRoles} onToggleRole={handleToggleRole} />
-      </div>
-
-      {/* Launch Timeline */}
-      <div className="mb-20">
-        <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 20 }}>
-          LAUNCH TIMELINE
-        </p>
-        <LaunchTimeline phases={phases} onToggleTask={handleToggleTask} />
-      </div>
-
-      {/* Plan Summary */}
-      <div className="mb-16">
-        <PlanSummary
-          selectedTier={selectedTier}
-          currentTotal={currentTotal}
-          includedRoles={includedRoles}
-          phases={phases}
-        />
+      {/* Tab content */}
+      <div className="mb-16" style={{ minHeight: 300 }}>
+        {renderTab()}
       </div>
 
       {/* Bottom actions */}
       <div
-        className="flex flex-wrap items-center gap-3 mt-20 pt-8"
+        className="flex flex-wrap items-center gap-3 mt-8 pt-8"
         style={{ borderTop: '1px solid var(--divider)' }}
       >
         <button
