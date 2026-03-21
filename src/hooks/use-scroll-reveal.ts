@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 export function useScrollReveal(staggerMs = 0) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
 
   const observe = useCallback(() => {
     const el = ref.current;
