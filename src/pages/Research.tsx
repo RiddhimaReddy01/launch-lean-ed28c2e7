@@ -209,46 +209,9 @@ export default function Research() {
           <AnalyzeModule />
         ) : currentStep === 'setup' ? (
           <SetupModule />
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 'calc(100vh - 400px)',
-            }}
-          >
-            <p
-              className="font-heading"
-              style={{
-                fontSize: 26,
-                textAlign: 'center',
-                lineHeight: 1.25,
-                letterSpacing: '-0.02em',
-                maxWidth: 440,
-              }}
-            >
-              {activeStep.placeholder}
-            </p>
-            <div
-              style={{
-                marginTop: 32,
-                width: 36,
-                height: 1,
-                backgroundColor: 'var(--divider-section)',
-              }}
-            />
-            <p
-              className="font-caption"
-              style={{ marginTop: 24, textAlign: 'center' }}
-            >
-              {currentIndex < STEPS.length - 1
-                ? `Step ${currentIndex + 1} of ${STEPS.length}`
-                : 'Final step'}
-            </p>
-          </div>
-        )}
+        ) : currentStep === 'validate' ? (
+          <ValidateModule />
+        ) : null}
       </div>
     </div>
   );

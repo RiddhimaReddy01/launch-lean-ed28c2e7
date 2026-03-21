@@ -104,9 +104,9 @@ export const MOCK_MARKETPLACE: MarketplaceListing = {
 };
 
 export const MOCK_DIRECT_OUTREACH: DirectOutreach = {
-  pitchMessage: 'Hi — I'm launching a cold-pressed juice concept in West Plano and looking for partners. Would your community be interested in a weekly fresh juice delivery or pop-up?',
-  introScript: 'My name is [Your Name]. I noticed your gym / apartment community / office doesn't have a healthy beverage option nearby. I'm starting a locally-sourced juice bar and would love to explore a partnership — maybe a small fridge or weekly delivery.',
-  valueProp: 'We source from Texas farms, press daily, and price 20–30% below franchise competitors. Your members get better juice, and you get a wellness amenity at zero cost.',
+  pitchMessage: "Hi -- I am launching a cold-pressed juice concept in West Plano and looking for partners. Would your community be interested in a weekly fresh juice delivery or pop-up?",
+  introScript: "My name is [Your Name]. I noticed your gym / apartment community / office does not have a healthy beverage option nearby. I am starting a locally-sourced juice bar and would love to explore a partnership -- maybe a small fridge or weekly delivery.",
+  valueProp: "We source from Texas farms, press daily, and price 20-30% below franchise competitors. Your members get better juice, and you get a wellness amenity at zero cost.",
 };
 
 export const MOCK_COMMUNITIES: CommunityChannel[] = [
