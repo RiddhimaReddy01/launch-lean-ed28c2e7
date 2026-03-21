@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Insight, Source } from '@/data/discover-mock';
+import { useIdea } from '@/context/IdeaContext';
 
 const TYPE_CONFIG: Record<Insight['type'], { label: string; color: string; bg: string }> = {
   pain: { label: 'PAIN POINT', color: 'var(--accent-purple)', bg: 'rgba(108,92,231,0.06)' },
@@ -30,6 +31,7 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
   const [expanded, setExpanded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState(0);
+  const { setSelectedInsight, setCurrentStep } = useIdea();
   const config = TYPE_CONFIG[insight.type];
 
   useEffect(() => {
@@ -198,7 +200,24 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
           </p>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 mt-5">
+          <div className="flex items-center gap-3 mt-5 flex-wrap">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedInsight(insight.title);
+                setCurrentStep('analyze');
+              }}
+              className="rounded-[10px] px-4 py-2 transition-all duration-200 active:scale-[0.97]"
+              style={{
+                fontSize: 13,
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 400,
+                backgroundColor: 'var(--accent-purple)',
+                color: '#FFFFFF',
+              }}
+            >
+              Deep dive this opportunity
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
