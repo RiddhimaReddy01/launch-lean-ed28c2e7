@@ -193,20 +193,6 @@ export default function AnalyzeModule() {
         style={{ borderTop: '1px solid var(--divider)' }}
       >
         <button
-          className="rounded-[12px] px-6 py-3 transition-all duration-200 active:scale-[0.97]"
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 14,
-            fontWeight: 400,
-            backgroundColor: 'var(--accent-purple)',
-            color: '#FFFFFF',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          View setup plan →
-        </button>
-        <button
           className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
           style={{
             fontFamily: "'Inter', sans-serif",

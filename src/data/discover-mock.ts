@@ -18,7 +18,7 @@ export interface Evidence {
 
 export interface Insight {
   id: string;
-  type: 'pain' | 'want' | 'gap' | 'trend';
+  type: 'pain' | 'want' | 'gap';
   title: string;
   score: number;
   frequency: number;
@@ -50,7 +50,6 @@ export const FILTER_CATEGORIES = [
   { key: 'pain', label: 'Pain Points' },
   { key: 'want', label: 'Unmet Wants' },
   { key: 'gap', label: 'Market Gaps' },
-  { key: 'trend', label: 'Trends' },
 ] as const;
 
 export const MOCK_INSIGHTS: Insight[] = [
@@ -157,7 +156,7 @@ export const MOCK_INSIGHTS: Insight[] = [
   },
   {
     id: 'insight_004',
-    type: 'trend',
+    type: 'want',
     title: 'Growing interest in adaptogen and functional add-ins',
     score: 68,
     frequency: 6,

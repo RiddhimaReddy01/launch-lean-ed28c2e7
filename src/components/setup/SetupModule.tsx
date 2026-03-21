@@ -244,22 +244,6 @@ export default function SetupModule() {
         style={{ borderTop: '1px solid var(--divider)' }}
       >
         <button
-          className="rounded-[12px] px-6 py-3 transition-all duration-200 active:scale-[0.97]"
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 14,
-            fontWeight: 400,
-            backgroundColor: 'var(--accent-purple)',
-            color: '#FFFFFF',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(108,92,231,0.3)')}
-          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
-        >
-          Create validation plan →
-        </button>
-        <button
           className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
           style={{
             fontFamily: "'Inter', sans-serif",
