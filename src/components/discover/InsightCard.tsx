@@ -199,7 +199,24 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
           </p>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 mt-5">
+          <div className="flex items-center gap-3 mt-5 flex-wrap">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedInsight(insight.title);
+                setCurrentStep('analyze');
+              }}
+              className="rounded-[10px] px-4 py-2 transition-all duration-200 active:scale-[0.97]"
+              style={{
+                fontSize: 13,
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 400,
+                backgroundColor: 'var(--accent-purple)',
+                color: '#FFFFFF',
+              }}
+            >
+              Deep dive this opportunity
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();

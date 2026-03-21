@@ -198,6 +198,8 @@ export default function Research() {
       >
         {currentStep === 'discover' ? (
           <DiscoverModule />
+        ) : currentStep === 'analyze' ? (
+          <AnalyzeModule />
         ) : (
           <div
             style={{
