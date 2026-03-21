@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import DiscoverModule from '@/components/discover/DiscoverModule';
 import AnalyzeModule from '@/components/analyze/AnalyzeModule';
 import SetupModule from '@/components/setup/SetupModule';
+import ValidateModule from '@/components/validate/ValidateModule';
 
 const STEPS: { key: Step; label: string; placeholder: string }[] = [
   { key: 'discover', label: 'Discover', placeholder: 'Scanning real conversations...' },
