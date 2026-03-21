@@ -123,8 +123,8 @@ async def _call_groq(
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    if json_mode:
-        body["response_format"] = {"type": "json_object"}
+    # Note: Groq doesn't support response_format like OpenAI does
+    # JSON parsing happens in _parse_json_response()
 
     return await _post_with_retry(
         url="https://api.groq.com/openai/v1/chat/completions",
