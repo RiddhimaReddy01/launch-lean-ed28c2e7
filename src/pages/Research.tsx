@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import DiscoverModule from '@/components/discover/DiscoverModule';
 import AnalyzeModule from '@/components/analyze/AnalyzeModule';
+import SetupModule from '@/components/setup/SetupModule';
 
 const STEPS: { key: Step; label: string; placeholder: string }[] = [
   { key: 'discover', label: 'Discover', placeholder: 'Scanning real conversations...' },
@@ -205,6 +206,8 @@ export default function Research() {
           <DiscoverModule />
         ) : currentStep === 'analyze' ? (
           <AnalyzeModule />
+        ) : currentStep === 'setup' ? (
+          <SetupModule />
         ) : (
           <div
             style={{
