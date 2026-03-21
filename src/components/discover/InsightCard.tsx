@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Insight, Source } from '@/data/discover-mock';
+import { useIdea } from '@/context/IdeaContext';
 
 const TYPE_CONFIG: Record<Insight['type'], { label: string; color: string; bg: string }> = {
   pain: { label: 'PAIN POINT', color: 'var(--accent-purple)', bg: 'rgba(108,92,231,0.06)' },
