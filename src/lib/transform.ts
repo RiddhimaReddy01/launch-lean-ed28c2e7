@@ -1,6 +1,6 @@
 import type { DiscoverResponse, DiscoverInsight, DiscoverSource, AnalyzeResponse, SetupResponse, ValidateResponse } from '@/types/api';
+import type { Insight, Source } from '@/test/__mocks__/discover';
 import type {
-  Insight, Source,
   MarketSize, DemandBehaviorData, CustomerSegment,
   Competitor, MarketStructureData, RootCause, StrategicSnapshotData, StartupCosts,
 } from '@/test/__mocks__/analyze';
