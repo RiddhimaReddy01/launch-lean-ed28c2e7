@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(IDEA_ID=\"c7f5eb09-d925-43fd-96b6-3a93e1aee88d\" __NEW_LINE_d4ec6c8a64690095__ echo \"=== 5. Retrieve cached risks \\(instant retrieval\\) ===\" curl -s http://localhost:8000/api/ideas/$IDEA_ID/risks)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -m py_compile /c/Users/riddh/OneDrive/Desktop/launchlens-backend/launchlens-backend/app/main.py)"
+    ]
+  }
+}

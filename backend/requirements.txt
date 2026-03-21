@@ -1,0 +1,23 @@
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.27.0
+httpx>=0.27.0
+
+# Data & Configuration
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+
+# Authentication & Database
+python-jose[cryptography]>=3.3.0
+supabase>=2.3.0
+
+# LLM Providers
+groq>=1.1.0
+google-generativeai>=0.8.0
+
+# PDF Generation
+reportlab>=4.0.0
+
+# Frontend tooling: run `npm install` inside `frontend/` to install vitest/react deps for UI tests.
+# Note: Frontend dependencies are managed via package.json/npm, not this file.

@@ -1,0 +1,240 @@
+"""
+POST /api/discover-insights
+Scans Reddit + Google → cleans → merges → LLM categorization → scoring → response.
+This is the data-heaviest endpoint in the pipeline.
+"""
+
+import json
+import logging
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.core.auth import optional_user
+from app.schemas.models import (
+    DiscoverRequest, DiscoverResponse, Insight, Evidence, SourceSummary,
+)
+from app.services.llm_client import call_llm, AllProvidersExhaustedError
+from app.services.reddit_scraper import fetch_all_subreddits, fetch_search_posts, extract_post_fields
+from app.services.google_search import run_search_queries, build_discover_queries
+from app.services.data_cleaner import (
+    clean_reddit_posts, clean_search_results, merge_all_sources, build_source_summary,
+)
+from app.prompts.templates import (
+    discover_categorize_system, discover_categorize_user,
+    discover_score_system, discover_score_user,
+)
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+POST_BUDGET = 80  # total posts passed to LLM
+SAMPLE_PER_GROUP = 5  # max per subreddit/query group
+SERPER_QUERY_CAP = 5
+
+
+@router.post("/api/discover-insights", response_model=DiscoverResponse)
+async def discover_insights(
+    req: DiscoverRequest,
+    user: dict | None = Depends(optional_user),
+):
+    decomp = req.decomposition
+    loc = decomp.get("location", {})
+    city = loc.get("city", "")
+    state = loc.get("state", "")
+    business_type = decomp.get("business_type", "")
+
+    # ═══ STAGE 1: DATA INGESTION ═══
+    logger.info(f"Discover: ingesting data for '{business_type}' in {city}, {state}")
+
+    # 1a. Reddit posts (parallel across subreddits)
+    subreddits = decomp.get("subreddits", [])
+    # Skip subreddit fetch to avoid 403 noise; use global Reddit search only
+    search_q = f"{business_type} {city} {state}".strip()
+    reddit_posts = []
+    if search_q:
+        raw_search_posts = await fetch_search_posts(search_q, limit=60)
+        reddit_posts = [extract_post_fields(p) for p in raw_search_posts]
+
+    # 1b. Google search results via Serper
+    search_queries = decomp.get("search_queries", [])
+    if not search_queries:
+        search_queries = build_discover_queries(decomp)
+    search_queries = search_queries[:SERPER_QUERY_CAP]
+    location_str = f"{city}, {state}" if city and state else None
+    raw_search = await run_search_queries(search_queries, location=location_str, num_per_query=10)
+
+    # ═══ STAGE 2: DATA CLEANING ═══
+    cleaned_reddit = clean_reddit_posts(reddit_posts)
+    cleaned_search = clean_search_results(raw_search, query_type="discover")
+
+    # ═══ STAGE 3: DATA TRANSFORMATION ═══
+    merged = merge_all_sources(cleaned_reddit, cleaned_search, max_items=200)
+    sources = build_source_summary(merged)
+
+    if len(merged) < 3:
+        logger.warning("Very few posts after cleaning, results may be thin")
+
+    # ═══ STAGE 4: LLM LOGIC ═══
+    # Rerank/sample before LLM
+    merged_sampled = _sample_posts(merged, budget=POST_BUDGET, per_group=SAMPLE_PER_GROUP)
+
+    try:
+        if len(merged_sampled) <= 60:
+            # Single-pass: categorize + score in one go
+            cat_system = discover_categorize_system(business_type, city, state)
+            cat_user = discover_categorize_user(merged_sampled, len(merged_sampled), include_score=True)
+            scored = await call_llm(
+                system_prompt=cat_system,
+                user_prompt=cat_user,
+                temperature=0.25,
+                max_tokens=1400,
+                json_mode=True,
+            )
+        else:
+            # Two-pass for larger sets
+            cat_system = discover_categorize_system(business_type, city, state)
+            cat_user = discover_categorize_user(merged_sampled, len(merged_sampled))
+
+            categorized = await call_llm(
+                system_prompt=cat_system,
+                user_prompt=cat_user,
+                temperature=0.25,
+                max_tokens=1600,
+                json_mode=True,
+            )
+
+            insights_raw = categorized.get("insights", categorized if isinstance(categorized, list) else [])
+            score_system = discover_score_system()
+            score_user = discover_score_user(json.dumps({"insights": insights_raw[:12]}, indent=2))
+
+            scored = await call_llm(
+                system_prompt=score_system,
+                user_prompt=score_user,
+                temperature=0.2,
+                max_tokens=900,
+                json_mode=True,
+            )
+
+    except AllProvidersExhaustedError:
+        # Heuristic fallback
+        fallback = _fallback_insights(merged_sampled)
+        return _post_process(fallback, sources, note="fallback")
+
+    # ═══ STAGE 5: POST-PROCESSING ═══
+    return _post_process(scored, sources)
+
+
+def _post_process(scored_data: dict, sources: list[dict], note: str | None = None) -> DiscoverResponse:
+    """Validate, normalize, and format the final response."""
+
+    raw_insights = scored_data.get("insights", scored_data if isinstance(scored_data, list) else [])
+
+    insights = []
+    for i, raw in enumerate(raw_insights[:12]):  # Cap at 12
+        # Normalize scores to 0-10
+        pain_score = raw.get("pain_score", 0)
+        if isinstance(pain_score, (int, float)) and pain_score > 10:
+            pain_score = pain_score / 10.0  # Normalize if LLM gave 0-100
+
+        # Build evidence list
+        evidence_list = []
+        for ev in raw.get("evidence", [])[:2]:
+            evidence_list.append(Evidence(
+                quote=ev.get("quote", ""),
+                source=ev.get("source", ""),
+                score=ev.get("score", 0),
+                upvotes=ev.get("upvotes"),
+                date=ev.get("date"),
+            ))
+
+        # Calculate mention count from frequency
+        freq = raw.get("frequency", raw.get("frequency_score", 0))
+        mention_count = int(freq) if isinstance(freq, (int, float)) else 0
+
+        insight = Insight(
+            id=f"ins_{i+1:03d}",
+            type=_normalize_type(raw.get("type", "pain_point")),
+            title=raw.get("title", ""),
+            score=round(min(10.0, max(0.0, float(pain_score))), 1),
+            frequency_score=_clamp(raw.get("frequency_score", 0)),
+            intensity_score=_clamp(raw.get("intensity_score", 0)),
+            willingness_to_pay_score=_clamp(raw.get("willingness_to_pay_score", 0)),
+            mention_count=mention_count,
+            evidence=evidence_list[:3],
+            source_platforms=raw.get("source_platforms", []),
+            audience_estimate=raw.get("audience_estimate", ""),
+        )
+        insights.append(insight)
+
+    # Sort by score descending
+    insights.sort(key=lambda x: x.score, reverse=True)
+
+    # Build source summaries
+    source_models = [SourceSummary(**s) for s in sources]
+
+    resp = DiscoverResponse(sources=source_models, insights=insights)
+    if note:
+        # attach note via model serialization
+        resp_dict = resp.model_dump()
+        resp_dict["note"] = note
+        return DiscoverResponse(**resp_dict)
+    return resp
+
+
+def _sample_posts(posts: list[dict], budget: int, per_group: int) -> list[dict]:
+    """Stratified sample across subreddit/query_type to keep diversity."""
+    buckets = {}
+    for p in posts:
+        key = p.get("subreddit") or p.get("query_type") or "misc"
+        buckets.setdefault(key, []).append(p)
+    sampled = []
+    for key, items in buckets.items():
+        sampled.extend(items[:per_group])
+    # Trim to budget by score if available
+    def score(p): return p.get("score", 0) or p.get("rating", 0) or 0
+    sampled.sort(key=score, reverse=True)
+    return sampled[:budget]
+
+
+def _fallback_insights(posts: list[dict]) -> dict:
+    """Heuristic insights when LLM unavailable."""
+    # Simple bag of words by source; pick top terms
+    texts = []
+    for p in posts:
+        texts.append(p.get("title", ""))
+        texts.append(p.get("body", p.get("snippet", "")))
+    full = " ".join(texts).lower()
+    keywords = []
+    for term in ["price", "wait", "quality", "service", "trust", "location", "app", "support", "feature"]:
+        if term in full:
+            keywords.append(term)
+    insights = []
+    for i, term in enumerate(keywords[:5]):
+        insights.append({
+            "id": f"fallback_{i+1}",
+            "type": "trend",
+            "title": f"Frequent mention of {term}",
+            "score": 5,
+            "frequency_score": 5,
+            "intensity_score": 4,
+            "willingness_to_pay_score": 3,
+            "mention_count": 0,
+            "evidence": [],
+            "source_platforms": ["reddit", "search"],
+            "audience_estimate": "unknown",
+        })
+    return {"insights": insights}
+
+
+def _normalize_type(t: str) -> str:
+    valid = {"pain_point", "unmet_want", "market_gap", "trend"}
+    t = t.lower().strip().replace(" ", "_")
+    return t if t in valid else "pain_point"
+
+
+def _clamp(v, lo=0.0, hi=10.0) -> float:
+    try:
+        v = float(v)
+        if v > hi:
+            v = v / 10.0  # Normalize 0-100 to 0-10
+        return round(min(hi, max(lo, v)), 1)
+    except (TypeError, ValueError):
+        return 0.0
