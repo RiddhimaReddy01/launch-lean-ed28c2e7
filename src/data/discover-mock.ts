@@ -115,7 +115,7 @@ export const MOCK_INSIGHTS: Insight[] = [
         url: 'https://nextdoor.com/',
       },
       {
-        quote: 'Cold-pressed is worth the markup if it's actually fresh and local.',
+        quote: "Cold-pressed is worth the markup if it's actually fresh and local.",
         sourceId: 'reddit_plano',
         sourceName: 'r/plano',
         upvotes: 18,
