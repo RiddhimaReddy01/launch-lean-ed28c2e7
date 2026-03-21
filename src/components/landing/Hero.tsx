@@ -11,7 +11,15 @@ const suggestions = [
 
 export default function Hero() {
   const [idea, setIdea] = useState('');
+  const { setIdea: setGlobalIdea } = useIdea();
+  const navigate = useNavigate();
   const headlineRef = useScrollReveal();
+
+  const handleStart = () => {
+    if (!idea.trim()) return;
+    setGlobalIdea(idea.trim());
+    navigate('/research');
+  };
   const subtitleRef = useScrollReveal(80);
   const inputRef = useScrollReveal(160);
 
