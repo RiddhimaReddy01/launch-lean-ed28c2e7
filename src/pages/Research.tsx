@@ -56,7 +56,7 @@ function StepperDot({ step, index, currentIndex, onNavigate }: { step: typeof ST
 }
 
 export default function Research() {
-  const { idea, currentStep } = useIdea();
+  const { idea, currentStep, setCurrentStep } = useIdea();
   const navigate = useNavigate();
   const contentRef = useRef<HTMLDivElement>(null);
 
