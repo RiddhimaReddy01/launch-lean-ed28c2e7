@@ -85,7 +85,7 @@ export const MOCK_SURVEY: SurveyQuestion[] = [
   { id: 'q3', question: 'What frustrates you about current options?', type: 'open' },
   { id: 'q4', question: 'How important is knowing where ingredients come from?', type: 'scale', options: ['1', '2', '3', '4', '5'] },
   { id: 'q5', question: 'Would you switch to a new local juice bar if it was transparent about sourcing?', type: 'multiple_choice', options: ['Definitely', 'Probably', 'Maybe', 'No'] },
-  { id: 'q6', question: 'What's the most you'd pay for a 16oz cold-pressed juice?', type: 'multiple_choice', options: ['$6–8', '$8–10', '$10–12', '$12+'] },
+  { id: 'q6', question: "What is the most you would pay for a 16oz cold-pressed juice?", type: 'multiple_choice', options: ['$6-8', '$8-10', '$10-12', '$12+'] },
   { id: 'q7', question: 'Which Plano area is most convenient for you?', type: 'multiple_choice', options: ['Legacy West', 'Downtown Plano', 'West Plano', 'Other'] },
   { id: 'q8', question: 'Would you be interested in a weekly juice subscription?', type: 'multiple_choice', options: ['Yes', 'Maybe', 'No'] },
   { id: 'q9', question: 'Leave your email for launch updates', type: 'email' },
