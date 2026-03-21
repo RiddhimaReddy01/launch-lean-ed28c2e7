@@ -93,12 +93,15 @@ export default function Hero() {
               fontSize: 14,
               borderRadius: 12,
               padding: '10px 20px',
+              opacity: idea.trim() ? 1 : 0.5,
+              cursor: idea.trim() ? 'pointer' : 'default',
             }}
+            onClick={handleStart}
             onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
             onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            Start →
+            Research this idea →
           </button>
         </div>
       </div>
