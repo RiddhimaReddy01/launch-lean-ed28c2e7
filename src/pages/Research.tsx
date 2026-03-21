@@ -16,7 +16,7 @@ function StepperDot({ step, index, currentIndex, onNavigate }: { step: typeof ST
   const isActive = index === currentIndex;
   const isCompleted = index < currentIndex;
   const isFuture = index > currentIndex;
-  const isClickable = isCompleted || isActive;
+  const isClickable = true;
 
   const dotColor = isCompleted
     ? 'var(--accent-purple)'
