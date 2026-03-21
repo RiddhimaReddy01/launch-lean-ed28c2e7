@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
+import { useIdea } from '@/context/IdeaContext';
 
 const suggestions = [
   { label: 'Juice bar in Plano', value: 'A fresh-pressed juice bar in Plano, Texas' },
