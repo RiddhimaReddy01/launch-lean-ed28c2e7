@@ -3,20 +3,37 @@ import { useIdea } from '@/context/IdeaContext';
 import SectionSkeleton from './SectionSkeleton';
 
 const OpportunitySizing = lazy(() => import('./OpportunitySizing'));
+const DemandBehavior = lazy(() => import('./DemandBehavior'));
 const CustomerSegments = lazy(() => import('./CustomerSegments'));
 const Competitors = lazy(() => import('./Competitors'));
+const MarketStructure = lazy(() => import('./MarketStructure'));
 const RootCauses = lazy(() => import('./RootCauses'));
+const StrategicSnapshot = lazy(() => import('./StrategicSnapshot'));
 const StartupCostsPreview = lazy(() => import('./StartupCostsPreview'));
 
 const TABS = [
   { key: 'sizing', label: 'Opportunity sizing' },
+  { key: 'demand', label: 'Demand & behavior' },
   { key: 'segments', label: 'Customer segments' },
   { key: 'competitors', label: 'Competitors' },
+  { key: 'structure', label: 'Market structure' },
   { key: 'rootcause', label: 'Why it still exists' },
+  { key: 'strategic', label: 'Strategic snapshot' },
   { key: 'costs', label: 'Startup costs' },
 ] as const;
 
 type TabKey = typeof TABS[number]['key'];
+
+const TAB_QUESTIONS: Record<TabKey, string> = {
+  sizing: 'Is the market big enough?',
+  demand: 'Do people care enough?',
+  segments: 'Who exactly to target?',
+  competitors: 'Where can I win?',
+  structure: 'Is this crowded or fragmented?',
+  rootcause: 'Why hasn\'t this been solved yet?',
+  strategic: 'Should I actually do this?',
+  costs: 'What will it cost to start?',
+};
 
 export default function AnalyzeModule() {
   const { idea, selectedInsight } = useIdea();
@@ -25,7 +42,6 @@ export default function AnalyzeModule() {
   const [ready, setReady] = useState<Set<TabKey>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Simulate lazy load delay on first visit
   useEffect(() => {
     if (!loaded.has(activeTab)) {
       setLoaded((prev) => new Set(prev).add(activeTab));
@@ -44,8 +60,6 @@ export default function AnalyzeModule() {
   }, []);
 
   const showSkeleton = !ready.has(activeTab);
-
-  // Mock data for the sticky strip
   const insightTitle = selectedInsight || 'Existing juice bars are overpriced for basic smoothies';
   const insightScore = 93;
 
@@ -112,13 +126,13 @@ export default function AnalyzeModule() {
             maxWidth: 540,
           }}
         >
-          We analyzed market size, customer demand, competitors, structural barriers, and startup feasibility for this specific gap.
+          We analyzed demand, customer behavior, competition, and structural constraints to determine if this idea is worth building.
         </p>
       </div>
 
       {/* Tab switcher */}
       <div
-        className="flex flex-wrap gap-1 mb-12"
+        className="flex flex-nowrap gap-0 mb-12 overflow-x-auto hide-scrollbar"
         style={{ borderBottom: '1px solid var(--divider)' }}
       >
         {TABS.map((tab) => {
@@ -127,7 +141,7 @@ export default function AnalyzeModule() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className="transition-all duration-200 active:scale-[0.97]"
+              className="transition-all duration-200 active:scale-[0.97] flex-shrink-0"
               style={{
                 fontFamily: "'Inter', sans-serif",
                 fontSize: 13,
@@ -136,7 +150,7 @@ export default function AnalyzeModule() {
                 background: 'none',
                 border: 'none',
                 borderBottom: isActive ? '2px solid var(--accent-purple)' : '2px solid transparent',
-                padding: '10px 14px',
+                padding: '10px 12px',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
@@ -147,6 +161,14 @@ export default function AnalyzeModule() {
         })}
       </div>
 
+      {/* Section question */}
+      <p
+        className="font-heading mb-8"
+        style={{ fontSize: 26, opacity: 0.4 }}
+      >
+        {TAB_QUESTIONS[activeTab]}
+      </p>
+
       {/* Section content */}
       <div style={{ minHeight: 300 }}>
         {showSkeleton ? (
@@ -154,9 +176,12 @@ export default function AnalyzeModule() {
         ) : (
           <Suspense fallback={<SectionSkeleton />}>
             {activeTab === 'sizing' && <OpportunitySizing />}
+            {activeTab === 'demand' && <DemandBehavior />}
             {activeTab === 'segments' && <CustomerSegments />}
             {activeTab === 'competitors' && <Competitors />}
+            {activeTab === 'structure' && <MarketStructure />}
             {activeTab === 'rootcause' && <RootCauses />}
+            {activeTab === 'strategic' && <StrategicSnapshot />}
             {activeTab === 'costs' && <StartupCostsPreview />}
           </Suspense>
         )}
