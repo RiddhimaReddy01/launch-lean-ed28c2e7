@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_METHODS, type ValidationMethod } from '@/data/validate-mock';
+import { MOCK_METHODS, type ValidationMethod } from '@/test/__mocks__/validate';
 
 const EFFORT_COLORS: Record<string, string> = {
   low: '#2D8B75',

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useIdea } from '@/context/IdeaContext';
-import { MOCK_TIERS, MOCK_TIER_COSTS, MOCK_TIMELINE } from '@/data/setup-mock';
-import type { TimelinePhase } from '@/data/setup-mock';
+import type { TimelinePhase } from '@/test/__mocks__/setup';
+import { useSetupPlan } from '@/hooks/use-research';
+import { mapSetupTiers, mapSetupSuppliers, mapSetupTeam, mapSetupTimeline } from '@/lib/transform';
+import { useToast } from '@/hooks/use-toast';
+import EmptyState from '../common/EmptyState';
 import CostBuilder from './CostBuilder';
 import Suppliers from './Suppliers';
 import TeamBuilder from './TeamBuilder';
@@ -31,12 +34,35 @@ const TAB_QUESTIONS: Record<TabKey, string> = {
 export default function SetupModule() {
   const { idea, selectedInsight } = useIdea();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const setupQuery = useSetupPlan();
+  useEffect(() => {
+    if (setupQuery.error) {
+      toast({
+        title: 'Setup plan unavailable',
+        description: setupQuery.error instanceof Error ? setupQuery.error.message : 'Unexpected error.',
+        variant: 'destructive',
+      });
+    }
+  }, [setupQuery.error, toast]);
+
+  const mapped = useMemo(() => mapSetupTiers(setupQuery.data), [setupQuery.data]);
+  const supplierData = useMemo(() => mapSetupSuppliers(setupQuery.data) || undefined, [setupQuery.data]);
+  const teamData = useMemo(() => mapSetupTeam(setupQuery.data) || undefined, [setupQuery.data]);
+  const timelineData = useMemo(() => mapSetupTimeline(setupQuery.data) || [], [setupQuery.data]);
 
   const [activeTab, setActiveTab] = useState<TabKey>('costs');
   const [selectedTier, setSelectedTier] = useState('recommended');
   const [estimates, setEstimates] = useState<Record<string, Estimate>>({});
   const [includedRoles, setIncludedRoles] = useState<Set<string>>(new Set(['manager', 'barista']));
-  const [phases, setPhases] = useState<TimelinePhase[]>(MOCK_TIMELINE.map((p) => ({ ...p, tasks: p.tasks.map((t) => ({ ...t })) })));
+  const [phases, setPhases] = useState<TimelinePhase[]>(timelineData.map((p) => ({ ...p, tasks: p.tasks.map((t) => ({ ...t })) })));
+
+  useEffect(() => {
+    if (timelineData.length) {
+      setPhases(timelineData.map((p) => ({ ...p, tasks: p.tasks.map((t) => ({ ...t })) })));
+    }
+  }, [timelineData]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -65,8 +91,11 @@ export default function SetupModule() {
     );
   }, []);
 
+  const tierCosts = mapped?.costs || {};
+  const tierList = mapped?.tiers || [];
+
   const currentTotal = useMemo(() => {
-    const categories = MOCK_TIER_COSTS[selectedTier] || [];
+    const categories = tierCosts[selectedTier] || [];
     let total = 0;
     categories.forEach((cat) =>
       cat.items.forEach((item) => {
@@ -76,18 +105,22 @@ export default function SetupModule() {
     return total;
   }, [selectedTier, estimates]);
 
-  const insightTitle = selectedInsight || 'Existing juice bars are overpriced for basic smoothies';
+  const insightTitle = selectedInsight?.title || 'Existing juice bars are overpriced for basic smoothies';
 
   const renderTab = () => {
     switch (activeTab) {
       case 'costs':
-        return (
+        return tierList.length ? (
           <CostBuilder
             selectedTier={selectedTier}
             onSelectTier={setSelectedTier}
             estimates={estimates}
             onEstimateChange={handleEstimateChange}
+            tiers={tierList}
+            tierCosts={tierCosts}
           />
+        ) : (
+          <EmptyState message="No cost tiers available yet." />
         );
       case 'suppliers':
         return (
@@ -95,18 +128,22 @@ export default function SetupModule() {
             <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 16 }}>
               SUPPLIERS & PARTNERS
             </p>
-            <Suppliers />
+            {supplierData ? <Suppliers suppliers={supplierData} /> : <EmptyState message="No suppliers returned." />}
           </div>
         );
       case 'team':
-        return <TeamBuilder includedRoles={includedRoles} onToggleRole={handleToggleRole} />;
+        return teamData ? (
+          <TeamBuilder includedRoles={includedRoles} onToggleRole={handleToggleRole} team={teamData || undefined} />
+        ) : (
+          <EmptyState message="No team plan yet." />
+        );
       case 'timeline':
         return (
           <div>
             <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.06em', marginBottom: 20 }}>
               LAUNCH TIMELINE
             </p>
-            <LaunchTimeline phases={phases} onToggleTask={handleToggleTask} />
+            {phases.length ? <LaunchTimeline phases={phases} onToggleTask={handleToggleTask} /> : <EmptyState message="No timeline provided." />}
           </div>
         );
       case 'summary':
@@ -149,7 +186,7 @@ export default function SetupModule() {
           <div>
             <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.04em', marginBottom: 4 }}>MODEL</p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 400, color: 'var(--accent-purple)' }}>
-              {MOCK_TIERS.find((t) => t.id === selectedTier)?.title}
+              {tierList.find((t) => t.id === selectedTier)?.title}
             </p>
           </div>
         </div>

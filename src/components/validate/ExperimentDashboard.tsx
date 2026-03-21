@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MOCK_METRICS, type MetricTarget } from '@/data/validate-mock';
+import { MOCK_METRICS, type MetricTarget } from '@/test/__mocks__/validate';
 
 type Verdict = 'awaiting' | 'go' | 'pivot' | 'kill';
 

@@ -29,6 +29,8 @@ export interface Insight {
   sourcePlatforms: string[];
   audienceEstimate: string;
   evidence: Evidence[];
+  // Optional raw payload from backend for reuse in later API calls
+  raw?: unknown;
 }
 
 export const MOCK_SUMMARY = {

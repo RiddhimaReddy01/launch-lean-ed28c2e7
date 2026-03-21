@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { MOCK_TIERS, MOCK_TIER_COSTS } from '@/data/setup-mock';
-import type { LaunchTier } from '@/data/setup-mock';
+import { MOCK_TIERS, MOCK_TIER_COSTS } from '@/test/__mocks__/setup';
+import type { LaunchTier, CostCategory } from '@/test/__mocks__/setup';
 
 type Estimate = 'low' | 'mid' | 'high';
 
@@ -80,17 +80,21 @@ export default function CostBuilder({
   onSelectTier,
   estimates,
   onEstimateChange,
+  tiers = MOCK_TIERS,
+  tierCosts = MOCK_TIER_COSTS,
 }: {
   selectedTier: string;
   onSelectTier: (id: string) => void;
   estimates: Record<string, Estimate>;
   onEstimateChange: (itemLabel: string, est: Estimate) => void;
+  tiers?: LaunchTier[];
+  tierCosts?: Record<string, CostCategory[]>;
 }) {
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-  const categories = MOCK_TIER_COSTS[selectedTier] || [];
+  const categories = tierCosts[selectedTier] || [];
 
   const totalRange = useMemo(() => {
     let min = 0;
@@ -142,7 +146,7 @@ export default function CostBuilder({
           SELECT YOUR LAUNCH MODEL
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
-          {MOCK_TIERS.map((tier) => (
+          {tiers.map((tier) => (
             <TierCard
               key={tier.id}
               tier={tier}

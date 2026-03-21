@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { MOCK_MARKET_SIZE } from '@/data/analyze-mock';
+import { MOCK_MARKET_SIZE, type MarketSize } from '@/test/__mocks__/analyze';
 
-export default function OpportunitySizing() {
+export default function OpportunitySizing({ marketSizes = MOCK_MARKET_SIZE }: { marketSizes?: MarketSize[] }) {
   const [methodOpen, setMethodOpen] = useState(false);
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
-  const maxRaw = MOCK_MARKET_SIZE[0].rawValue;
+  const maxRaw = marketSizes[0]?.rawValue || 1;
 
   return (
     <div>
       {/* Metric blocks */}
       <div className="flex flex-col gap-8">
-        {MOCK_MARKET_SIZE.map((m) => (
+        {marketSizes.map((m) => (
           <div
             key={m.acronym}
             className="rounded-[12px] p-5 transition-all duration-200"
@@ -60,7 +60,7 @@ export default function OpportunitySizing() {
           MARKET FUNNEL
         </p>
         <div className="flex flex-col gap-3">
-          {MOCK_MARKET_SIZE.map((m) => {
+          {marketSizes.map((m) => {
             const pct = Math.max((m.rawValue / maxRaw) * 100, 4);
             const isHovered = hoveredBar === m.acronym;
             return (
@@ -165,18 +165,18 @@ export default function OpportunitySizing() {
             ↓
           </span>
         </button>
-        <div
-          style={{
-            maxHeight: methodOpen ? 300 : 0,
-            overflow: 'hidden',
-            transition: 'max-height 300ms ease-out',
-          }}
-        >
           <div
-            className="rounded-[10px] mt-3 p-4"
-            style={{ backgroundColor: 'var(--surface-input)' }}
+            style={{
+              maxHeight: methodOpen ? 300 : 0,
+              overflow: 'hidden',
+              transition: 'max-height 300ms ease-out',
+            }}
           >
-            {MOCK_MARKET_SIZE.map((m) => (
+            <div
+              className="rounded-[10px] mt-3 p-4"
+              style={{ backgroundColor: 'var(--surface-input)' }}
+            >
+            {marketSizes.map((m) => (
               <p key={m.acronym} className="font-caption" style={{ fontSize: 12, marginBottom: 8 }}>
                 <span style={{ fontWeight: 400, color: 'var(--text-primary)' }}>{m.acronym}:</span>{' '}
                 {m.methodology}

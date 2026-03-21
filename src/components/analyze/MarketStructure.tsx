@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_MARKET_STRUCTURE } from '@/data/analyze-mock';
+import { MOCK_MARKET_STRUCTURE, type MarketStructureData } from '@/test/__mocks__/analyze';
 
 function StructureIndicator({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
   const [hovered, setHovered] = useState(false);
@@ -53,9 +53,8 @@ function StructureIndicator({ label, value, tooltip }: { label: string; value: s
   );
 }
 
-export default function MarketStructure() {
+export default function MarketStructure({ data = MOCK_MARKET_STRUCTURE }: { data?: MarketStructureData }) {
   const [fragHovered, setFragHovered] = useState(false);
-  const data = MOCK_MARKET_STRUCTURE;
 
   return (
     <div>

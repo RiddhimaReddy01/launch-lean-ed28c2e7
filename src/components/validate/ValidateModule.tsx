@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useIdea } from '@/context/IdeaContext';
-import { MOCK_METRICS, MOCK_COMMUNITIES, MOCK_METHODS } from '@/data/validate-mock';
+import { MOCK_METRICS, MOCK_METHODS } from '@/test/__mocks__/validate';
+import { useValidationPlan } from '@/hooks/use-research';
+import { mapValidateCommunities } from '@/lib/transform';
+import { useToast } from '@/hooks/use-toast';
+import EmptyState from '../common/EmptyState';
 
 type Verdict = 'awaiting' | 'go' | 'pivot' | 'kill';
 
@@ -13,6 +17,20 @@ export default function ValidateModule() {
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   const [hoveredMethod, setHoveredMethod] = useState<string | null>(null);
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
+  const { toast } = useToast();
+  const validationQuery = useValidationPlan();
+
+  const communities = mapValidateCommunities(validationQuery.data) || [];
+
+  useEffect(() => {
+    if (validationQuery.error) {
+      toast({
+        title: 'Validation plan unavailable',
+        description: validationQuery.error instanceof Error ? validationQuery.error.message : 'Unexpected error',
+        variant: 'destructive',
+      });
+    }
+  }, [validationQuery.error, toast]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -78,7 +96,7 @@ export default function ValidateModule() {
   };
   const vc = verdictConfig[verdict];
 
-  const insightTitle = selectedInsight || 'Existing juice bars are overpriced for basic smoothies';
+  const insightTitle = selectedInsight?.title || 'Existing juice bars are overpriced for basic smoothies';
 
   return (
     <div ref={containerRef} className="scroll-reveal" style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
@@ -135,7 +153,7 @@ export default function ValidateModule() {
         </p>
       </div>
 
-      {/* ═══ VERDICT CARD (hero position) ═══ */}
+      {/* VERDICT CARD (hero position) */}
       <div
         className="rounded-[16px] mb-16 text-center"
         style={{ padding: 40, backgroundColor: vc.bg }}
@@ -149,7 +167,7 @@ export default function ValidateModule() {
         </p>
       </div>
 
-      {/* ═══ METRICS GRID ═══ */}
+      {/* METRICS GRID */}
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>EXPERIMENT METRICS</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
@@ -204,7 +222,7 @@ export default function ValidateModule() {
         </div>
       </div>
 
-      {/* ═══ DERIVED SIGNALS ═══ */}
+      {/* DERIVED SIGNALS */}
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>DERIVED SIGNALS</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -221,7 +239,7 @@ export default function ValidateModule() {
         </div>
       </div>
 
-      {/* ═══ VALIDATION METHODS ═══ */}
+      {/* VALIDATION METHODS */}
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>VALIDATION METHODS</p>
         <div className="flex flex-col gap-2">
@@ -273,65 +291,69 @@ export default function ValidateModule() {
         </div>
       </div>
 
-      {/* ═══ CHANNELS ═══ */}
+      {/* CHANNELS */}
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>WHERE TO SHARE</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-          {MOCK_COMMUNITIES.map((c) => {
-            const isShared = sharedChannels.has(c.id);
-            const isHov = hoveredChannel === c.id;
-            return (
-              <div
-                key={c.id}
-                className="rounded-[12px] p-4 transition-all duration-200"
-                style={{
-                  backgroundColor: isShared ? 'rgba(45,139,117,0.04)' : 'var(--surface-card)',
-                  boxShadow: isHov ? '0 4px 12px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.04)',
-                  transform: isHov ? 'translateY(-1px)' : 'translateY(0)',
-                }}
-                onMouseEnter={() => setHoveredChannel(c.id)}
-                onMouseLeave={() => setHoveredChannel(null)}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 400, color: 'var(--accent-purple)', textDecoration: 'none' }}
-                  >
-                    {c.name} ↗
-                  </a>
-                  <span
-                    className="font-caption rounded-full px-2 py-0.5"
-                    style={{ fontSize: 10, backgroundColor: c.platformColor, color: '#fff' }}
-                  >
-                    {c.platform}
-                  </span>
-                </div>
-                <p className="font-caption" style={{ fontSize: 12, marginBottom: 6 }}>{c.members} members</p>
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 8 }}>
-                  {c.rationale}
-                </p>
-                <button
-                  onClick={() => toggleChannel(c.id)}
-                  className="rounded-[8px] px-3 py-1.5 transition-all duration-200 active:scale-[0.97]"
+        {communities.length === 0 ? (
+          <EmptyState message={validationQuery.isFetching ? 'Loading communities�' : 'No communities returned yet.'} />
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+            {communities.map((c) => {
+              const isShared = sharedChannels.has(c.id);
+              const isHov = hoveredChannel === c.id;
+              return (
+                <div
+                  key={c.id}
+                  className="rounded-[12px] p-4 transition-all duration-200"
                   style={{
-                    fontSize: 11, fontFamily: "'Inter', sans-serif", fontWeight: 400,
-                    backgroundColor: isShared ? 'rgba(45,139,117,0.08)' : 'var(--surface-input)',
-                    color: isShared ? '#2D8B75' : 'var(--text-muted)',
-                    border: 'none', cursor: 'pointer',
+                    backgroundColor: isShared ? 'rgba(45,139,117,0.04)' : 'var(--surface-card)',
+                    boxShadow: isHov ? '0 4px 12px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.04)',
+                    transform: isHov ? 'translateY(-1px)' : 'translateY(0)',
                   }}
+                  onMouseEnter={() => setHoveredChannel(c.id)}
+                  onMouseLeave={() => setHoveredChannel(null)}
                 >
-                  {isShared ? '✓ Shared' : 'Mark as shared'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 400, color: 'var(--accent-purple)', textDecoration: 'none' }}
+                    >
+                      {c.name} ↗
+                    </a>
+                    <span
+                      className="font-caption rounded-full px-2 py-0.5"
+                      style={{ fontSize: 10, backgroundColor: c.platformColor, color: '#fff' }}
+                    >
+                      {c.platform}
+                    </span>
+                  </div>
+                  <p className="font-caption" style={{ fontSize: 12, marginBottom: 6 }}>{c.members} members</p>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 8 }}>
+                    {c.rationale}
+                  </p>
+                  <button
+                    onClick={() => toggleChannel(c.id)}
+                    className="rounded-[8px] px-3 py-1.5 transition-all duration-200 active:scale-[0.97]"
+                    style={{
+                      fontSize: 11, fontFamily: "'Inter', sans-serif", fontWeight: 400,
+                      backgroundColor: isShared ? 'rgba(45,139,117,0.08)' : 'var(--surface-input)',
+                      color: isShared ? '#2D8B75' : 'var(--text-muted)',
+                      border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    {isShared ? '✓ Shared' : 'Mark as shared'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* ═══ SUMMARY ═══ */}
+      {/* SUMMARY */}
       <div
         className="rounded-[14px] p-6 mb-12"
         style={{ backgroundColor: 'var(--surface-input)' }}
@@ -387,3 +409,5 @@ export default function ValidateModule() {
     </div>
   );
 }
+
+

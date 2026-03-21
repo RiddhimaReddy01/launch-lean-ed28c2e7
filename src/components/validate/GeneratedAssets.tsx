@@ -5,7 +5,7 @@ import {
   MOCK_SOCIAL_OUTREACH,
   MOCK_MARKETPLACE,
   MOCK_DIRECT_OUTREACH,
-} from '@/data/validate-mock';
+} from '@/test/__mocks__/validate';
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);

@@ -1,4 +1,4 @@
-import type { Insight } from '@/data/discover-mock';
+import type { Insight } from '@/test/__mocks__/discover';
 
 interface MentionsPanelProps {
   insight: Insight;

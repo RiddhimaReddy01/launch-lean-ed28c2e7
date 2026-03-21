@@ -6,7 +6,7 @@ import WhatYouGet from '@/components/landing/WhatYouGet';
 import FinalCTA from '@/components/landing/FinalCTA';
 import Footer from '@/components/layout/Footer';
 
-const Index = () => {
+const Landing = () => {
   return (
     <>
       <Nav />
@@ -24,4 +24,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Landing;

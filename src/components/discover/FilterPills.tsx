@@ -1,4 +1,4 @@
-import { FILTER_CATEGORIES } from '@/data/discover-mock';
+import { FILTER_CATEGORIES } from '@/test/__mocks__/discover';
 
 interface FilterPillsProps {
   selected: string;

@@ -1,6 +1,19 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, useMemo } from 'react';
 import { useIdea } from '@/context/IdeaContext';
 import SectionSkeleton from './SectionSkeleton';
+import { useAnalyzeSection } from '@/hooks/use-research';
+import {
+  mapOpportunity,
+  mapDemandBehavior,
+  mapSegments,
+  mapCompetitors,
+  mapMarketStructure,
+  mapRootCauses,
+  mapStrategic,
+  mapCostsPreview,
+} from '@/lib/transform';
+import { useToast } from '@/hooks/use-toast';
+import EmptyState from '../common/EmptyState';
 
 const OpportunitySizing = lazy(() => import('./OpportunitySizing'));
 const DemandBehavior = lazy(() => import('./DemandBehavior'));
@@ -41,6 +54,24 @@ export default function AnalyzeModule() {
   const [loaded, setLoaded] = useState<Set<TabKey>>(new Set(['sizing']));
   const [ready, setReady] = useState<Set<TabKey>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const sizingQuery = useAnalyzeSection('opportunity');
+  const demandQuery = useAnalyzeSection('customers');
+  const competitorsQuery = useAnalyzeSection('competitors');
+  const rootQuery = useAnalyzeSection('rootcause');
+  const costsQuery = useAnalyzeSection('costs');
+
+  useEffect(() => {
+    const err = sizingQuery.error || demandQuery.error || competitorsQuery.error || rootQuery.error || costsQuery.error;
+    if (err) {
+      toast({
+        title: 'Analysis unavailable',
+        description: err instanceof Error ? err.message : 'Unexpected error.',
+        variant: 'destructive',
+      });
+    }
+  }, [sizingQuery.error, demandQuery.error, competitorsQuery.error, rootQuery.error, costsQuery.error, toast]);
 
   useEffect(() => {
     if (!loaded.has(activeTab)) {
@@ -60,8 +91,30 @@ export default function AnalyzeModule() {
   }, []);
 
   const showSkeleton = !ready.has(activeTab);
-  const insightTitle = selectedInsight || 'Existing juice bars are overpriced for basic smoothies';
-  const insightScore = 93;
+  const insightTitle = selectedInsight?.title || 'Select an insight to analyze';
+  const insightScore = Math.round((selectedInsight as any)?.score || 0);
+
+  const view = useMemo(
+    () => ({
+      market: mapOpportunity(sizingQuery.data),
+      demand: mapDemandBehavior(demandQuery.data),
+      segments: mapSegments(demandQuery.data),
+      competitors: mapCompetitors(competitorsQuery.data),
+      structure: mapMarketStructure(competitorsQuery.data),
+      root: mapRootCauses(rootQuery.data),
+      strategic: mapStrategic(rootQuery.data),
+      costs: mapCostsPreview(costsQuery.data),
+    }),
+    [sizingQuery.data, demandQuery.data, competitorsQuery.data, rootQuery.data, costsQuery.data],
+  );
+
+  const hasLiveData = Boolean(
+    sizingQuery.data ||
+      demandQuery.data ||
+      competitorsQuery.data ||
+      rootQuery.data ||
+      costsQuery.data,
+  );
 
   return (
     <div ref={containerRef} className="scroll-reveal" style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
@@ -175,14 +228,54 @@ export default function AnalyzeModule() {
           <SectionSkeleton />
         ) : (
           <Suspense fallback={<SectionSkeleton />}>
-            {activeTab === 'sizing' && <OpportunitySizing />}
-            {activeTab === 'demand' && <DemandBehavior />}
-            {activeTab === 'segments' && <CustomerSegments />}
-            {activeTab === 'competitors' && <Competitors />}
-            {activeTab === 'structure' && <MarketStructure />}
-            {activeTab === 'rootcause' && <RootCauses />}
-            {activeTab === 'strategic' && <StrategicSnapshot />}
-            {activeTab === 'costs' && <StartupCostsPreview />}
+            {activeTab === 'sizing' &&
+              (view.market ? (
+                <OpportunitySizing marketSizes={view.market} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No sizing data returned.' : 'Run discovery and pick an insight to analyze.'} />
+              ))}
+            {activeTab === 'demand' &&
+              (view.demand ? (
+                <DemandBehavior data={view.demand} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No demand signals returned.' : 'Select an insight first.'} />
+              ))}
+            {activeTab === 'segments' &&
+              (view.segments ? (
+                <CustomerSegments segments={view.segments} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No segments generated.' : 'Select an insight first.'} />
+              ))}
+            {activeTab === 'competitors' &&
+              (view.competitors ? (
+                <Competitors competitors={view.competitors} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No competitors found.' : 'Select an insight first.'} />
+              ))}
+            {activeTab === 'structure' &&
+              (view.structure ? (
+                <MarketStructure data={view.structure} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No structure data yet.' : 'Select an insight first.'} />
+              ))}
+            {activeTab === 'rootcause' &&
+              (view.root ? (
+                <RootCauses causes={view.root} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No root causes returned.' : 'Select an insight first.'} />
+              ))}
+            {activeTab === 'strategic' &&
+              (view.strategic ? (
+                <StrategicSnapshot data={view.strategic} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No strategic takeaways yet.' : 'Select an insight first.'} />
+              ))}
+            {activeTab === 'costs' &&
+              (view.costs ? (
+                <StartupCostsPreview data={view.costs} />
+              ) : (
+                <EmptyState message={hasLiveData ? 'No cost preview returned.' : 'Select an insight first.'} />
+              ))}
           </Suspense>
         )}
       </div>

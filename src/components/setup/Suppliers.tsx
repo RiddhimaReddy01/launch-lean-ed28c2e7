@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { MOCK_SUPPLIERS } from '@/data/setup-mock';
+import { MOCK_SUPPLIERS } from '@/test/__mocks__/setup';
+import type { Supplier } from '@/test/__mocks__/setup';
 
-export default function Suppliers() {
+export default function Suppliers({ suppliers = MOCK_SUPPLIERS }: { suppliers?: Record<string, Supplier[]> }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const categories = Object.keys(MOCK_SUPPLIERS);
+  const categories = Object.keys(suppliers);
 
   const toggleCat = (cat: string) => {
     setExpandedCats((prev) => {
@@ -42,7 +43,7 @@ export default function Suppliers() {
             Local suppliers & partners
           </p>
           <p className="font-caption mt-1" style={{ fontSize: 12 }}>
-            {categories.length} categories · {Object.values(MOCK_SUPPLIERS).flat().length} suppliers found
+            {categories.length} categories · {Object.values(suppliers).flat().length} suppliers found
           </p>
         </div>
         <span className="transition-transform duration-200" style={{ fontSize: 14, color: 'var(--text-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>↓</span>
@@ -52,7 +53,7 @@ export default function Suppliers() {
         <div className="mt-4 flex flex-col gap-2">
           {categories.map((cat) => {
             const isOpen = expandedCats.has(cat);
-            const suppliers = MOCK_SUPPLIERS[cat];
+            const catSuppliers = suppliers[cat];
             return (
               <div key={cat} className="rounded-[12px]" style={{ backgroundColor: 'var(--surface-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <button
@@ -64,7 +65,7 @@ export default function Suppliers() {
                     {cat}
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className="font-caption" style={{ fontSize: 12 }}>{suppliers.length}</span>
+                    <span className="font-caption" style={{ fontSize: 12 }}>{catSuppliers.length}</span>
                     <span className="transition-transform duration-200" style={{ fontSize: 13, color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>↓</span>
                   </div>
                 </button>
@@ -72,7 +73,7 @@ export default function Suppliers() {
                 <div style={{ maxHeight: isOpen ? 800 : 0, overflow: 'hidden', transition: 'max-height 300ms ease-out' }}>
                   <div className="px-4 pb-4 flex flex-col gap-3">
                     <div style={{ height: 1, backgroundColor: 'var(--divider)' }} />
-                    {suppliers.map((s) => {
+                    {catSuppliers.map((s) => {
                       const isHovered = hoveredCard === s.name;
                       const isSaved = bookmarked.has(s.name);
                       return (

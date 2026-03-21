@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Insight, Source } from '@/data/discover-mock';
+import type { Insight, Source } from '@/test/__mocks__/discover';
 import { useIdea } from '@/context/IdeaContext';
 
 const TYPE_CONFIG: Record<Insight['type'], { label: string; color: string; bg: string }> = {
@@ -203,7 +203,7 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedInsight(insight.title);
+                setSelectedInsight(insight);
                 setCurrentStep('analyze');
               }}
               className="rounded-[10px] px-4 py-2 transition-all duration-200 active:scale-[0.97]"

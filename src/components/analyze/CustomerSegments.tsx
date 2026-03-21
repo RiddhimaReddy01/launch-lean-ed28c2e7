@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { MOCK_SEGMENTS } from '@/data/analyze-mock';
+import { MOCK_SEGMENTS, type CustomerSegment } from '@/test/__mocks__/analyze';
 
-export default function CustomerSegments() {
+export default function CustomerSegments({ segments = MOCK_SEGMENTS }: { segments?: CustomerSegment[] }) {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const [hoveredBar, setHoveredBar] = useState<{ segment: string; index: number } | null>(null);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {MOCK_SEGMENTS.map((seg) => {
+      {segments.map((seg) => {
         const isHovered = hoveredSegment === seg.name;
         return (
           <div

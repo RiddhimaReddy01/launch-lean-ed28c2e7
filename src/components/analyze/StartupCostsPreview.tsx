@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { MOCK_COSTS } from '@/data/analyze-mock';
+import { MOCK_COSTS, type StartupCosts } from '@/test/__mocks__/analyze';
 
-export default function StartupCostsPreview() {
+export default function StartupCostsPreview({ data = MOCK_COSTS }: { data?: StartupCosts }) {
   const [hoveredCat, setHoveredCat] = useState<string | null>(null);
   const [summaryHovered, setSummaryHovered] = useState(false);
 
@@ -24,9 +24,9 @@ export default function StartupCostsPreview() {
           ESTIMATED STARTUP RANGE
         </p>
         <div className="flex items-baseline gap-3">
-          <span className="font-heading transition-colors duration-200" style={{ fontSize: 26, color: summaryHovered ? 'var(--accent-purple)' : undefined }}>{MOCK_COSTS.minTotal}</span>
+          <span className="font-heading transition-colors duration-200" style={{ fontSize: 26, color: summaryHovered ? 'var(--accent-purple)' : undefined }}>{data.minTotal}</span>
           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 300, color: 'var(--text-muted)' }}>to</span>
-          <span className="font-heading transition-colors duration-200" style={{ fontSize: 26, color: summaryHovered ? 'var(--accent-purple)' : undefined }}>{MOCK_COSTS.maxTotal}</span>
+          <span className="font-heading transition-colors duration-200" style={{ fontSize: 26, color: summaryHovered ? 'var(--accent-purple)' : undefined }}>{data.maxTotal}</span>
         </div>
         <p className="font-caption mt-2" style={{ fontSize: 12 }}>
           Based on Plano, TX market rates — food hall kiosk to standalone 600 sq ft location
@@ -35,7 +35,7 @@ export default function StartupCostsPreview() {
 
       {/* Breakdown */}
       <div className="flex flex-col gap-1">
-        {MOCK_COSTS.categories.map((cat) => {
+        {data.categories.map((cat) => {
           const isHovered = hoveredCat === cat.label;
           return (
             <div

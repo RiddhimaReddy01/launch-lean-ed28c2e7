@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_STRATEGIC_SNAPSHOT } from '@/data/analyze-mock';
+import { MOCK_STRATEGIC_SNAPSHOT, type StrategicSnapshotData } from '@/test/__mocks__/analyze';
 
 function SwotQuadrant({ label, items, accentBg, accentHoverBg, accentText }: { label: string; items: string[]; accentBg: string; accentHoverBg: string; accentText: string }) {
   const [hovered, setHovered] = useState(false);
@@ -59,8 +59,8 @@ function SwotQuadrant({ label, items, accentBg, accentHoverBg, accentText }: { l
   );
 }
 
-export default function StrategicSnapshot() {
-  const { swot, takeaways, decision, decisionReasoning } = MOCK_STRATEGIC_SNAPSHOT;
+export default function StrategicSnapshot({ data = MOCK_STRATEGIC_SNAPSHOT }: { data?: StrategicSnapshotData }) {
+  const { swot, takeaways, decision, decisionReasoning } = data;
   const [hoveredTakeaway, setHoveredTakeaway] = useState<number | null>(null);
   const [decisionHovered, setDecisionHovered] = useState(false);
 

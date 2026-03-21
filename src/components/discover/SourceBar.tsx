@@ -1,4 +1,4 @@
-import type { Source } from '@/data/discover-mock';
+import type { Source } from '@/test/__mocks__/discover';
 
 interface SourceBarProps {
   sources: Source[];

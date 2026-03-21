@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_COMMUNITIES } from '@/data/validate-mock';
+import { MOCK_COMMUNITIES } from '@/test/__mocks__/validate';
 
 export default function CommunityGrid() {
   const [usedIds, setUsedIds] = useState<Set<string>>(new Set());

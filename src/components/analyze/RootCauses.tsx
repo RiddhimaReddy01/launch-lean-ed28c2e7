@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { MOCK_ROOT_CAUSES } from '@/data/analyze-mock';
+import { MOCK_ROOT_CAUSES, type RootCause } from '@/test/__mocks__/analyze';
 
-export default function RootCauses() {
+export default function RootCauses({ causes = MOCK_ROOT_CAUSES }: { causes?: RootCause[] }) {
   const [hoveredCause, setHoveredCause] = useState<number | null>(null);
 
   return (
@@ -23,7 +23,7 @@ export default function RootCauses() {
       </p>
 
       <div className="flex flex-col gap-10">
-        {MOCK_ROOT_CAUSES.map((cause, i) => {
+        {causes.map((cause, i) => {
           const isHovered = hoveredCause === i;
           return (
             <div

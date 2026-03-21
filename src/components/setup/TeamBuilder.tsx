@@ -1,7 +1,16 @@
 import { useState } from 'react';
-import { MOCK_TEAM } from '@/data/setup-mock';
+import { MOCK_TEAM } from '@/test/__mocks__/setup';
+import type { TeamRole } from '@/test/__mocks__/setup';
 
-export default function TeamBuilder({ includedRoles, onToggleRole }: { includedRoles: Set<string>; onToggleRole: (id: string) => void }) {
+export default function TeamBuilder({
+  includedRoles,
+  onToggleRole,
+  team = MOCK_TEAM,
+}: {
+  includedRoles: Set<string>;
+  onToggleRole: (id: string) => void;
+  team?: TeamRole[];
+}) {
   const [hoveredRole, setHoveredRole] = useState<string | null>(null);
 
   const teamCount = includedRoles.size;
@@ -18,7 +27,7 @@ export default function TeamBuilder({ includedRoles, onToggleRole }: { includedR
       </div>
 
       <div className="flex flex-col gap-3">
-        {MOCK_TEAM.map((role) => {
+        {team.map((role) => {
           const included = includedRoles.has(role.id);
           const hovered = hoveredRole === role.id;
 

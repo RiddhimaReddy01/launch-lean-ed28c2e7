@@ -1,5 +1,5 @@
-import { MOCK_TIERS, MOCK_TEAM } from '@/data/setup-mock';
-import type { TimelinePhase } from '@/data/setup-mock';
+import { MOCK_TIERS, MOCK_TEAM } from '@/test/__mocks__/setup';
+import type { TimelinePhase } from '@/test/__mocks__/setup';
 
 interface PlanSummaryProps {
   selectedTier: string;
