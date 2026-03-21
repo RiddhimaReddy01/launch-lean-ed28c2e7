@@ -76,25 +76,6 @@ export default function StartupCostsPreview() {
         })}
       </div>
 
-      {/* CTA */}
-      <div className="mt-8">
-        <button
-          className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 14,
-            fontWeight: 400,
-            backgroundColor: 'rgba(108,92,231,0.06)',
-            color: 'var(--accent-purple)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(108,92,231,0.12)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(108,92,231,0.06)'; }}
-        >
-          View full setup plan →
-        </button>
-      </div>
     </div>
   );
 }

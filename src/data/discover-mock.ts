@@ -156,7 +156,7 @@ export const MOCK_INSIGHTS: Insight[] = [
   },
   {
     id: 'insight_004',
-    type: 'trend',
+    type: 'want',
     title: 'Growing interest in adaptogen and functional add-ins',
     score: 68,
     frequency: 6,
