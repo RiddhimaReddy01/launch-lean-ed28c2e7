@@ -31,6 +31,7 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
   const [expanded, setExpanded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState(0);
+  const { setSelectedInsight, setCurrentStep } = useIdea();
   const config = TYPE_CONFIG[insight.type];
 
   useEffect(() => {
