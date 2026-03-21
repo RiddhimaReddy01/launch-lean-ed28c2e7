@@ -81,7 +81,7 @@ export const MOCK_LANDING_PAGE: LandingPageAsset = {
 
 export const MOCK_SURVEY: SurveyQuestion[] = [
   { id: 'q1', question: 'How often do you buy juice or smoothies?', type: 'multiple_choice', options: ['Daily', '2–3x per week', 'Weekly', 'Rarely'] },
-  { id: 'q2', question: 'Where do you currently buy them?', type: 'multiple_choice', options: ['Juice bar / smoothie shop', 'Grocery store', 'Make at home', 'I don't'] },
+  { id: 'q2', question: 'Where do you currently buy them?', type: 'multiple_choice', options: ['Juice bar / smoothie shop', 'Grocery store', 'Make at home', "I don't"] },
   { id: 'q3', question: 'What frustrates you about current options?', type: 'open' },
   { id: 'q4', question: 'How important is knowing where ingredients come from?', type: 'scale', options: ['1', '2', '3', '4', '5'] },
   { id: 'q5', question: 'Would you switch to a new local juice bar if it was transparent about sourcing?', type: 'multiple_choice', options: ['Definitely', 'Probably', 'Maybe', 'No'] },
