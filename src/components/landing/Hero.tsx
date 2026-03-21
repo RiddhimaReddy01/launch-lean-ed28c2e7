@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
+import { useIdea } from '@/context/IdeaContext';
 
 const suggestions = [
   { label: 'Juice bar in Plano', value: 'A fresh-pressed juice bar in Plano, Texas' },
@@ -9,7 +11,15 @@ const suggestions = [
 
 export default function Hero() {
   const [idea, setIdea] = useState('');
+  const { setIdea: setGlobalIdea } = useIdea();
+  const navigate = useNavigate();
   const headlineRef = useScrollReveal();
+
+  const handleStart = () => {
+    if (!idea.trim()) return;
+    setGlobalIdea(idea.trim());
+    navigate('/research');
+  };
   const subtitleRef = useScrollReveal(80);
   const inputRef = useScrollReveal(160);
 
@@ -83,12 +93,15 @@ export default function Hero() {
               fontSize: 14,
               borderRadius: 12,
               padding: '10px 20px',
+              opacity: idea.trim() ? 1 : 0.5,
+              cursor: idea.trim() ? 'pointer' : 'default',
             }}
+            onClick={handleStart}
             onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
             onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            Start →
+            Research this idea →
           </button>
         </div>
       </div>
