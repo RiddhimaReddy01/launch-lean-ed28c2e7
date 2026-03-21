@@ -6,6 +6,37 @@ export interface MarketSize {
   methodology: string;
 }
 
+export interface DemandSignals {
+  painIntensity: number;
+  frequencyOfMentions: number;
+  willingnessToPay: number;
+}
+
+export interface UsagePattern {
+  frequencyOfUse: string;
+  retentionPotential: string;
+  revenueType: string;
+}
+
+export interface PricingDynamics {
+  typicalRange: string;
+  premiumCeiling: string;
+  priceSensitivity: string;
+}
+
+export interface AdoptionFriction {
+  trustBarrier: 'low' | 'medium' | 'high';
+  switchingFriction: 'low' | 'medium' | 'high';
+  riskPerception: 'low' | 'medium' | 'high';
+}
+
+export interface DemandBehaviorData {
+  demand: DemandSignals;
+  usage: UsagePattern;
+  pricing: PricingDynamics;
+  friction: AdoptionFriction;
+}
+
 export interface CustomerSegment {
   name: string;
   description: string;
@@ -24,12 +55,34 @@ export interface Competitor {
   reviewExcerpts: string[];
   strengths: string[];
   weaknesses: string[];
+  url?: string;
+}
+
+export interface MarketStructureData {
+  saturation: 'low' | 'medium' | 'high';
+  fragmentation: string;
+  differentiation: 'low' | 'medium' | 'high';
+  explanation: string;
 }
 
 export interface RootCause {
   title: string;
   explanation: string;
   yourMove: string;
+}
+
+export interface SwotData {
+  strengths: string[];
+  weaknesses: string[];
+  opportunities: string[];
+  threats: string[];
+}
+
+export interface StrategicSnapshotData {
+  swot: SwotData;
+  takeaways: string[];
+  decision: 'go' | 'pivot' | 'stop';
+  decisionReasoning: string;
 }
 
 export interface CostCategory {
@@ -67,6 +120,29 @@ export const MOCK_MARKET_SIZE: MarketSize[] = [
     methodology: 'Realistic year-one capture: single Plano location, 3-mile radius, 2.1% penetration.',
   },
 ];
+
+export const MOCK_DEMAND_BEHAVIOR: DemandBehaviorData = {
+  demand: {
+    painIntensity: 8,
+    frequencyOfMentions: 7,
+    willingnessToPay: 7,
+  },
+  usage: {
+    frequencyOfUse: '2–3× per week',
+    retentionPotential: 'High — habitual purchase pattern',
+    revenueType: 'Recurring (daily consumable)',
+  },
+  pricing: {
+    typicalRange: '$8 – $14 per drink',
+    premiumCeiling: '$18 for cold-pressed specialty',
+    priceSensitivity: 'Moderate — quality justifies premium',
+  },
+  friction: {
+    trustBarrier: 'medium',
+    switchingFriction: 'low',
+    riskPerception: 'low',
+  },
+};
 
 export const MOCK_SEGMENTS: CustomerSegment[] = [
   {
@@ -113,6 +189,7 @@ export const MOCK_COMPETITORS: Competitor[] = [
     ],
     strengths: ['Brand recognition', 'Drive-through convenience', 'Loyalty app'],
     weaknesses: ['Artificial ingredient perception', 'No local sourcing story', 'Generic menu across all locations'],
+    url: 'https://www.smoothieking.com/',
   },
   {
     name: 'Juiceland',
@@ -127,6 +204,7 @@ export const MOCK_COMPETITORS: Competitor[] = [
     ],
     strengths: ['Cult following', 'Transparent sourcing', 'Unique flavor combinations'],
     weaknesses: ['No suburban DFW locations', 'Higher price point', 'Long wait times'],
+    url: 'https://www.juiceland.com/',
   },
   {
     name: 'Nekter Juice Bar',
@@ -141,8 +219,16 @@ export const MOCK_COMPETITORS: Competitor[] = [
     ],
     strengths: ['Clean brand aesthetic', 'Reasonable pricing', 'Consistent experience'],
     weaknesses: ['No local identity', 'Limited customization', 'Weak community engagement'],
+    url: 'https://www.nekterjuicebar.com/',
   },
 ];
+
+export const MOCK_MARKET_STRUCTURE: MarketStructureData = {
+  saturation: 'medium',
+  fragmentation: 'Highly fragmented — many independent providers, few dominant brands in suburbs',
+  differentiation: 'low',
+  explanation: 'The Plano health beverage market is moderately saturated with national chains but highly fragmented among independents. Brand trust is low across the board — consumers default to chains out of convenience, not loyalty. This creates a clear opening for a reliability-focused, locally-rooted entrant that can build genuine community trust.',
+};
 
 export const MOCK_ROOT_CAUSES: RootCause[] = [
   {
@@ -161,6 +247,39 @@ export const MOCK_ROOT_CAUSES: RootCause[] = [
     yourMove: 'Target Legacy West food hall or the new Boardwalk at Granite Park. These spaces offer lower upfront commitment and built-in foot traffic from adjacent tenants.',
   },
 ];
+
+export const MOCK_STRATEGIC_SNAPSHOT: StrategicSnapshotData = {
+  swot: {
+    strengths: [
+      'Strong unmet demand signals (8/10 pain intensity)',
+      'Recurring purchase pattern drives retention',
+      'Low switching friction from existing options',
+    ],
+    weaknesses: [
+      'Medium trust barrier for new food brands',
+      'Higher startup costs vs. digital businesses',
+      'Dependent on physical location quality',
+    ],
+    opportunities: [
+      'No craft juice presence in Plano suburbs',
+      'Food hall inventory opening in Legacy corridor',
+      'Corporate wellness catering is underserved',
+    ],
+    threats: [
+      'Juiceland may expand to DFW suburbs within 2 years',
+      'Economic downturn could compress premium spending',
+      'Health trend fatigue among mainstream consumers',
+    ],
+  },
+  takeaways: [
+    'Trust is the main differentiator, not price — lead with transparency',
+    'Recurring demand makes customer retention the critical metric',
+    'Fragmented competition leaves room for brand-building before consolidation',
+    'Suburban-native design (parking, mobile order, catering) is the structural advantage',
+  ],
+  decision: 'go',
+  decisionReasoning: 'Strong demand signals, fragmented competition with no dominant local player, and available commercial inventory create a favorable entry window. The key risk — trust barrier — is addressable through transparency and community engagement.',
+};
 
 export const MOCK_COSTS: StartupCosts = {
   minTotal: '$47,000',
