@@ -71,7 +71,7 @@ export const MOCK_LANDING_PAGE: LandingPageAsset = {
   subheadline: 'Fresh, cold-pressed, locally sourced. Not another franchise smoothie.',
   benefits: [
     'Cold-pressed daily from local Texas farms',
-    'Transparent ingredients — see exactly what's in every bottle',
+    "Transparent ingredients — see exactly what's in every bottle",
     'Affordable without the franchise markup',
     'Opening in West Plano — walk-in or subscribe for weekly delivery',
   ],
