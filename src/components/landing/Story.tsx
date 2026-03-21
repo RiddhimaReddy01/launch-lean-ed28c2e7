@@ -15,7 +15,7 @@ export default function Story() {
       </p>
 
       <p ref={p2} className="scroll-reveal font-body" style={{ marginTop: 40 }}>
-        The Lean Startup solved this twenty years ago: get out of the building. Talk to customers. Test before you build.
+        The Lean Startup  framework solved this twenty years ago: get out of the building. Talk to customers. Test before you build.
       </p>
 
       <p ref={p3} className="scroll-reveal font-body" style={{ marginTop: 40 }}>
@@ -29,18 +29,18 @@ export default function Story() {
           marginTop: 40,
           padding: '24px 0',
           borderTop: '1px solid var(--divider)',
-          borderBottom: '1px solid var(--divider)',
-        }}
-      >
+          borderBottom: '1px solid var(--divider)'
+        }}>
+        
         <p
           style={{
             fontFamily: "'Instrument Serif', serif",
             fontSize: 18,
             fontStyle: 'italic',
             color: 'var(--text-primary)',
-            lineHeight: 1.5,
-          }}
-        >
+            lineHeight: 1.5
+          }}>
+          
           "I spent three weeks researching my restaurant concept. By the time I finished, I was too exhausted to actually start."
         </p>
         <p className="font-caption" style={{ marginTop: 12 }}>
@@ -52,6 +52,6 @@ export default function Story() {
         LaunchLens does the legwork. You type one sentence about your idea. We scan the places where your future customers{' '}
         <span className="font-body-strong">already talk</span> — Reddit, Yelp, local forums — and come back with the four things you need before you spend a dollar.
       </p>
-    </section>
-  );
+    </section>);
+
 }
