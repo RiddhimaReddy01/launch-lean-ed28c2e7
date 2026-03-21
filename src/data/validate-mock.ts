@@ -98,7 +98,7 @@ export const MOCK_SOCIAL_OUTREACH: OutreachMessage = {
 
 export const MOCK_MARKETPLACE: MarketplaceListing = {
   title: 'Fresh Cold-Pressed Juice — Plano/West Plano (Pre-Launch)',
-  description: 'Testing interest for a new locally-sourced cold-pressed juice concept in the Plano area. Made fresh daily with produce from Texas farms. Not a franchise — a real local business focused on quality and transparency. Reply if you'd be interested in trying samples or joining our waitlist.',
+  description: "Testing interest for a new locally-sourced cold-pressed juice concept in the Plano area. Made fresh daily with produce from Texas farms. Not a franchise -- a real local business focused on quality and transparency. Reply if you would be interested in trying samples or joining our waitlist.",
   pricing: '$7–10 per 16oz bottle',
   hook: 'Tired of paying $14 for watered-down franchise smoothies?',
 };
