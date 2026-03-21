@@ -210,17 +210,23 @@ export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTi
   return { tiers, costs };
 }
 
-export function mapSetupSuppliers(raw: SetupResponse | undefined): UiSupplier[] | undefined {
+export function mapSetupSuppliers(raw: SetupResponse | undefined): Record<string, UiSupplier[]> | undefined {
   if (!raw) return undefined;
-  return raw.suppliers.map((s) => ({
-    name: s.name,
-    type: s.category,
-    description: s.description,
-    location: s.location,
-    distance: '',
-    url: s.website,
-    category: s.category,
-  }));
+  const grouped: Record<string, UiSupplier[]> = {};
+  for (const s of raw.suppliers) {
+    const cat = s.category || 'Other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push({
+      name: s.name,
+      type: s.category,
+      description: s.description,
+      location: s.location,
+      distance: '',
+      url: s.website,
+      category: s.category,
+    });
+  }
+  return grouped;
 }
 
 export function mapSetupTeam(raw: SetupResponse | undefined): UiTeamRole[] | undefined {
