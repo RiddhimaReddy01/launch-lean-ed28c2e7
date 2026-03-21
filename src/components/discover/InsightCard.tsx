@@ -6,7 +6,6 @@ const TYPE_CONFIG: Record<Insight['type'], { label: string; color: string; bg: s
   pain: { label: 'PAIN POINT', color: 'var(--accent-purple)', bg: 'rgba(108,92,231,0.06)' },
   want: { label: 'UNMET WANT', color: 'var(--accent-teal)', bg: 'rgba(45,139,117,0.06)' },
   gap: { label: 'MARKET GAP', color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.06)' },
-  trend: { label: 'TREND', color: 'var(--accent-amber)', bg: 'rgba(212,136,15,0.06)' },
 };
 
 function intensityLabel(val: number): string {

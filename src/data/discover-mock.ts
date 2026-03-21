@@ -18,7 +18,7 @@ export interface Evidence {
 
 export interface Insight {
   id: string;
-  type: 'pain' | 'want' | 'gap' | 'trend';
+  type: 'pain' | 'want' | 'gap';
   title: string;
   score: number;
   frequency: number;
