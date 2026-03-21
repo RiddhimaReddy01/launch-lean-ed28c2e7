@@ -50,7 +50,6 @@ export const FILTER_CATEGORIES = [
   { key: 'pain', label: 'Pain Points' },
   { key: 'want', label: 'Unmet Wants' },
   { key: 'gap', label: 'Market Gaps' },
-  { key: 'trend', label: 'Trends' },
 ] as const;
 
 export const MOCK_INSIGHTS: Insight[] = [
