@@ -206,6 +206,8 @@ export default function Research() {
           <DiscoverModule />
         ) : currentStep === 'analyze' ? (
           <AnalyzeModule />
+        ) : currentStep === 'setup' ? (
+          <SetupModule />
         ) : (
           <div
             style={{
