@@ -5,6 +5,7 @@ import { useSetupPlan } from '@/hooks/use-research';
 import { mapSetupTiers, mapSetupSuppliers, mapSetupTeam, mapSetupTimeline } from '@/lib/transform';
 import { useToast } from '@/hooks/use-toast';
 import EmptyState from '../common/EmptyState';
+import LoadingSpinner from '../common/LoadingSpinner';
 import CostBuilder from './CostBuilder';
 import Suppliers from './Suppliers';
 import TeamBuilder from './TeamBuilder';
@@ -160,6 +161,10 @@ export default function SetupModule() {
 
   return (
     <div ref={containerRef} className="scroll-reveal" style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
+      {setupQuery.isPending && <LoadingSpinner message="Generating launch plan..." />}
+
+      {!setupQuery.isPending && (
+        <>
       {/* Sticky context strip */}
       <div
         className="sticky z-30 rounded-[12px] mb-12 p-5"
@@ -311,6 +316,8 @@ export default function SetupModule() {
           Adjust assumptions
         </button>
       </div>
+        </>
+      )}
     </div>
   );
 }

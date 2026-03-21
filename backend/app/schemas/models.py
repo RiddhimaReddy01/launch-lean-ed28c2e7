@@ -266,3 +266,46 @@ class ValidateResponse(BaseModel):
     whatsapp_message: Optional[WhatsAppMessage] = None
     communities: list[Community] = Field(default_factory=list)
     scorecard: Scorecard = Field(default_factory=Scorecard)
+
+
+# ═══ VALIDATION EXPERIMENT TRACKING ═══
+
+
+class ValidationExperimentMetrics(BaseModel):
+    waitlist_signups: int = 0
+    survey_completions: int = 0
+    would_switch_rate: float = 0.0
+    price_tolerance_avg: float = 0.0
+    community_engagement: int = 0
+    reddit_upvotes: int = 0
+
+
+class CreateValidationExperimentRequest(BaseModel):
+    idea_id: str
+    methods: list[str] = Field(default_factory=list)
+    metrics: ValidationExperimentMetrics = Field(default_factory=ValidationExperimentMetrics)
+
+
+class ValidationExperimentResponse(BaseModel):
+    id: str = ""
+    idea_id: str = ""
+    methods: list[str] = Field(default_factory=list)
+    waitlist_signups: int = 0
+    survey_completions: int = 0
+    would_switch_rate: float = 0.0
+    price_tolerance_avg: float = 0.0
+    community_engagement: int = 0
+    reddit_upvotes: int = 0
+    verdict: Optional[str] = None
+    reasoning: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class UpdateValidationExperimentRequest(BaseModel):
+    waitlist_signups: Optional[int] = None
+    survey_completions: Optional[int] = None
+    would_switch_rate: Optional[float] = None
+    price_tolerance_avg: Optional[float] = None
+    community_engagement: Optional[int] = None
+    reddit_upvotes: Optional[int] = None

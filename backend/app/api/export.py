@@ -71,8 +71,6 @@ async def export_pdf(
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error exporting PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Error exporting PDF: {str(e)}")

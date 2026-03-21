@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { MOCK_SUPPLIERS } from '@/test/__mocks__/setup';
 import type { Supplier } from '@/test/__mocks__/setup';
 
-export default function Suppliers({ suppliers = MOCK_SUPPLIERS }: { suppliers?: Record<string, Supplier[]> }) {
+export default function Suppliers({ suppliers = {} }: { suppliers?: Record<string, Supplier[]> }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());

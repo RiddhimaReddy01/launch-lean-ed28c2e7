@@ -4,7 +4,6 @@ Generates complete launch plan: cost tiers, suppliers, team, timeline.
 Pipeline: Serper search for suppliers → LLM generation → validation → response.
 """
 
-import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 

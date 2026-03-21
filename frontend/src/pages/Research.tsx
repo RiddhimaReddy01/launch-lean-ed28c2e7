@@ -5,6 +5,7 @@ import DiscoverModule from '@/components/discover/DiscoverModule';
 import AnalyzeModule from '@/components/analyze/AnalyzeModule';
 import SetupModule from '@/components/setup/SetupModule';
 import ValidateModule from '@/components/validate/ValidateModule';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 const STEPS: { key: Step; label: string; placeholder: string }[] = [
   { key: 'discover', label: 'Discover', placeholder: 'Scanning real conversations...' },
@@ -193,26 +194,28 @@ export default function Research() {
       </div>
 
       {/* Content area */}
-      <div
-        ref={contentRef}
-        key={currentStep}
-        className="scroll-reveal"
-        style={{
-          maxWidth: 1100,
-          margin: '0 auto',
-          padding: '80px 24px 160px',
-        }}
-      >
-        {currentStep === 'discover' ? (
-          <DiscoverModule />
-        ) : currentStep === 'analyze' ? (
-          <AnalyzeModule />
-        ) : currentStep === 'setup' ? (
-          <SetupModule />
-        ) : currentStep === 'validate' ? (
-          <ValidateModule />
-        ) : null}
-      </div>
+      <ErrorBoundary>
+        <div
+          ref={contentRef}
+          key={currentStep}
+          className="scroll-reveal"
+          style={{
+            maxWidth: 1100,
+            margin: '0 auto',
+            padding: '80px 24px 160px',
+          }}
+        >
+          {currentStep === 'discover' ? (
+            <DiscoverModule />
+          ) : currentStep === 'analyze' ? (
+            <AnalyzeModule />
+          ) : currentStep === 'setup' ? (
+            <SetupModule />
+          ) : currentStep === 'validate' ? (
+            <ValidateModule />
+          ) : null}
+        </div>
+      </ErrorBoundary>
     </div>
   );
 }

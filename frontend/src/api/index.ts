@@ -39,3 +39,12 @@ export {
   type FinancialsAnalysisResponse,
   type AcquisitionAnalysisResponse,
 } from './ideas';
+
+// Validation tracking and metrics
+export {
+  createValidationExperiment,
+  getValidationExperiments,
+  updateValidationExperiment,
+  type ValidationExperiment,
+  type CreateValidationExperimentRequest,
+} from './tracking';

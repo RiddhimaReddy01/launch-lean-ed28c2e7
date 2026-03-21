@@ -15,6 +15,7 @@ from app.api import (
     ideas,
     export,
     progress,
+    tracking,
 )
 
 # Create main router
@@ -32,3 +33,4 @@ router.include_router(ideas.router, tags=["Ideas"])
 router.include_router(export.router, tags=["Export"])
 router.include_router(analysis.router, tags=["Advanced Analysis"])
 router.include_router(progress.router, tags=["Progress Tracking"])
+router.include_router(tracking.router, tags=["Validation Tracking"])

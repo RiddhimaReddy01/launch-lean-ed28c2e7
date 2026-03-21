@@ -125,9 +125,77 @@ CREATE TRIGGER update_ideas_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- ═══════════════════════════════════════════════════════════════
+-- VALIDATION EXPERIMENTS TABLE - Tracks validation metrics over time
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE validation_experiments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  idea_id UUID NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+
+  -- Method selections (array of method IDs)
+  methods TEXT[] DEFAULT '{}',
+
+  -- Experiment metrics
+  waitlist_signups INT DEFAULT 0,
+  survey_completions INT DEFAULT 0,
+  would_switch_rate FLOAT DEFAULT 0,
+  price_tolerance_avg FLOAT DEFAULT 0,
+  community_engagement INT DEFAULT 0,
+  reddit_upvotes INT DEFAULT 0,
+
+  -- Verdict and reasoning
+  verdict VARCHAR(20),  -- go, pivot, kill, awaiting
+  reasoning TEXT,
+
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for faster queries
+CREATE INDEX validation_experiments_user_id_idx ON validation_experiments(user_id);
+CREATE INDEX validation_experiments_idea_id_idx ON validation_experiments(idea_id);
+CREATE INDEX validation_experiments_created_at_idx ON validation_experiments(created_at DESC);
+
+-- Enable RLS
+ALTER TABLE validation_experiments ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their own validation experiments
+CREATE POLICY "Users can view their own validation experiments"
+  ON validation_experiments
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert their own validation experiments
+CREATE POLICY "Users can insert their own validation experiments"
+  ON validation_experiments
+  FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own validation experiments
+CREATE POLICY "Users can update their own validation experiments"
+  ON validation_experiments
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can delete their own validation experiments
+CREATE POLICY "Users can delete their own validation experiments"
+  ON validation_experiments
+  FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Auto-update timestamp
+CREATE TRIGGER update_validation_experiments_updated_at
+  BEFORE UPDATE ON validation_experiments
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- ═══════════════════════════════════════════════════════════════
 -- DONE!
 -- ═══════════════════════════════════════════════════════════════
 -- You can now:
--- 1. Check Supabase → Database → Tables → Should see "ideas"
+-- 1. Check Supabase → Database → Tables → Should see "ideas" and "validation_experiments"
 -- 2. Check Supabase → Authentication → Users (for auth.users reference)
 -- 3. Now run the Python backend code

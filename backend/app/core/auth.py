@@ -1,17 +1,18 @@
 """
 Supabase JWT verification middleware.
-For the hackathon, we use a lightweight approach:
 - Extract JWT from Authorization header
-- Verify with Supabase's JWKS endpoint
-- For development, allow bypass with X-Dev-Mode header
+- Verify with Supabase JWT secret
+- Decode and extract user_id + email
+- For development, optional bypass
 """
 
-from fastapi import Request, HTTPException, Depends
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-import httpx
+import logging
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
 
 
@@ -19,48 +20,53 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     """
-    Verify the Supabase JWT and return user info.
-    In development mode, returns a mock user if no token is provided.
+    Verify Supabase JWT token and return user info.
+    Production: Strict JWT validation
+    Development: Optional bypass for testing
     """
-    # Development bypass
+    # Development: Allow bypass if no token
     if settings.ENVIRONMENT == "development" and credentials is None:
-        return {"id": "d23de268-412c-4b85-8fa9-29416047b765", "email": "dev@launchlens.ai"}
+        logger.warning("Using development bypass - no JWT validation")
+        return {
+            "id": "dev-user-12345",
+            "email": "developer@launchlens.dev",
+        }
 
     if credentials is None:
-        raise HTTPException(status_code=401, detail="Missing authorization token")
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization token. Use: Authorization: Bearer {token}"
+        )
 
     token = credentials.credentials
 
     try:
-        # Supabase JWTs are signed with the project's JWT secret
-        # For hackathon simplicity, we decode without full JWKS verification
-        # and trust the Supabase infrastructure
+        # Decode Supabase JWT
+        # Supabase signs JWTs with the project's JWT secret
         payload = jwt.decode(
             token,
             settings.SUPABASE_ANON_KEY,
             algorithms=["HS256"],
-            audience="authenticated",
-            options={"verify_exp": True, "verify_aud": False},
+            options={"verify_exp": True},
         )
+
+        user_id = payload.get("sub")
+        email = payload.get("email", "")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token: missing user ID")
+
         return {
-            "id": payload.get("sub", "unknown"),
-            "email": payload.get("email", ""),
+            "id": user_id,
+            "email": email,
         }
-    except JWTError:
-        # Fallback: try without audience verification for dev tokens
-        try:
-            payload = jwt.decode(
-                token,
-                settings.SUPABASE_ANON_KEY,
-                algorithms=["HS256"],
-                options={"verify_exp": True, "verify_aud": False},
-            )
-            return {
-                "id": payload.get("sub", "unknown"),
-                "email": payload.get("email", ""),
-            }
-        except JWTError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+
+    except JWTError as e:
+        logger.error(f"JWT validation failed: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token. Please log in again."
+        )
 
 
 async def optional_user(
@@ -73,3 +79,10 @@ async def optional_user(
         return await get_current_user(credentials)
     except HTTPException:
         return None
+
+
+async def require_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
+    """Required auth - raises 401 if no valid token."""
+    return await get_current_user(credentials)

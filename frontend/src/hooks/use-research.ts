@@ -47,13 +47,13 @@ export function useSetupPlan(analysis_context?: Record<string, unknown>) {
   });
 }
 
-export function useValidationPlan(analysis_context?: Record<string, unknown>, setup_context?: Record<string, unknown>) {
+export function useValidationPlan(analysis_context?: Record<string, unknown>, setup_context?: Record<string, unknown>, channels?: string[]) {
   const { idea, decomposeQuery } = useResearchCore();
   const { selectedInsight } = useIdea();
 
   return useQuery<ValidateResponse>({
-    queryKey: ['validate', idea, selectedInsight?.id],
-    queryFn: () => generateValidation(selectedInsight?.raw || selectedInsight, decomposeQuery.data, analysis_context, setup_context),
+    queryKey: ['validate', idea, selectedInsight?.id, channels],
+    queryFn: () => generateValidation(selectedInsight?.raw || selectedInsight, decomposeQuery.data, analysis_context, setup_context, channels),
     enabled: Boolean(idea && decomposeQuery.data && selectedInsight),
     staleTime: 1000 * 60 * 5,
   });

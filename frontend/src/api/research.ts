@@ -63,9 +63,16 @@ export async function generateValidation(
   decomposition: unknown,
   analysis_context?: unknown,
   setup_context?: unknown,
+  channels?: string[],
 ): Promise<ValidateResponse> {
   return request<ValidateResponse>('/api/generate-validation', {
     method: 'POST',
-    body: JSON.stringify({ insight, decomposition, analysis_context, setup_context }),
+    body: JSON.stringify({
+      insight,
+      decomposition,
+      analysis_context,
+      setup_context,
+      channels: channels || ['landing_page', 'survey'],
+    }),
   });
 }

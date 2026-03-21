@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: launchlens-backend
+    runtime: python
+    runtimeVersion: '3.13'
+
+    buildCommand: |
+      cd backend
+      pip install -r requirements.txt
+
+    startCommand: |
+      cd backend
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: GROQ_API_KEY
+        fromDatabase:
+          name: GROQ_API_KEY
+      - key: GEMINI_API_KEY
+        fromDatabase:
+          name: GEMINI_API_KEY
+      - key: SUPABASE_URL
+        fromDatabase:
+          name: SUPABASE_URL
+      - key: SUPABASE_ANON_KEY
+        fromDatabase:
+          name: SUPABASE_ANON_KEY
+      - key: SUPABASE_SERVICE_KEY
+        fromDatabase:
+          name: SUPABASE_SERVICE_KEY
+      - key: SERPER_API_KEY
+        fromDatabase:
+          name: SERPER_API_KEY
+      - key: ENVIRONMENT
+        value: production
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: FRONTEND_URL
+        value: https://your-lovable-app.lovable.app
+
+    disk:
+      name: cache
+      mountPath: /var/cache
+      sizeGB: 1

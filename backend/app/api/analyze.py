@@ -4,7 +4,6 @@ Generates one of five analysis sections on demand (lazy-loaded per tab click).
 Sections: opportunity | customers | competitors | rootcause | costs
 """
 
-import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 

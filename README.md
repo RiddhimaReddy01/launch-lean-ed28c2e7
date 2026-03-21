@@ -77,6 +77,72 @@ launch-lean/
 └── .gitignore
 ```
 
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    %% Styling
+    classDef client fill:#f9f9fb,stroke:#d0d0d5,stroke-width:2px;
+    classDef backend fill:#f0f5ff,stroke:#adc8ff,stroke-width:2px;
+    classDef external fill:#f6ffed,stroke:#b7eb8f,stroke-width:2px;
+    classDef data fill:#fff0f6,stroke:#ffadd2,stroke-width:2px;
+
+    %% Client Layer
+    subgraph Client [USER BROWSER / DEVICE]
+        direction TB
+        UI[Frontend: React + Vite + Tailwind]:::client
+        State[(Local State: React Context)]:::client
+        Storage[(Local Storage: JWT Auth)]:::client
+        
+        UI --> |Updates & Reads| State
+        UI -.-> |JWT Auth Token| Storage
+        
+        subgraph Pipeline [5-Module Research Pipeline]
+            direction LR
+            P1[1. Decompose]:::client
+            P2[2. Discover]:::client
+            P3[3. Analyze]:::client
+            P4[4. Setup]:::client
+            P5[5. Validate]:::client
+            P1 --> P2 --> P3 --> P4 --> P5
+        end
+        UI --> Pipeline
+    end
+
+    %% Backend Layer
+    subgraph Server [BACKEND : FastAPI]
+        API[API Endpoints]:::backend
+        Auth[Auth Middleware]:::backend
+        Logic[Data Processing / Orchestration]:::backend
+        
+        API --> Auth
+        Auth --> Logic
+    end
+
+    %% Database Layer
+    subgraph Database [SUPABASE : PostgreSQL]
+        DB_Ideas[(table: ideas)]:::data
+        DB_Exp[(table: validation_experiments)]:::data
+        DB_Auth[(auth.users)]:::data
+    end
+
+    %% External Services
+    subgraph External [EXTERNAL SERVICES]
+        Groq[Groq LLaMA 3.3]:::external
+        Gemini[Gemini Flash Fallback]:::external
+        Serper[Serper.dev Search]:::external
+    end
+
+    %% Connections
+    Pipeline == HTTPS POST & JWT ==> API
+    Logic == API calls ==> Groq
+    Logic -. Fallback .-> Gemini
+    Logic == Search Queries ==> Serper
+    Logic == SQL Queries / ORM ==> DB_Ideas
+    Logic == SQL Queries / ORM ==> DB_Exp
+    Auth == Validate JWT Signature ==> DB_Auth
+```
+
 ## 🚀 Quick Start
 
 ### Backend Setup

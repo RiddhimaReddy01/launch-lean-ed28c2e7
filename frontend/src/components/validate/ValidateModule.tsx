@@ -2,11 +2,23 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useIdea } from '@/context/IdeaContext';
 import { MOCK_METRICS, MOCK_METHODS } from '@/test/__mocks__/validate';
 import { useValidationPlan } from '@/hooks/use-research';
+import { useValidationTracking } from '@/hooks/use-validation-tracking';
 import { mapValidateCommunities } from '@/lib/transform';
 import { useToast } from '@/hooks/use-toast';
 import EmptyState from '../common/EmptyState';
+import LoadingSpinner from '../common/LoadingSpinner';
+import SaveAuthModal from './SaveAuthModal';
 
 type Verdict = 'awaiting' | 'go' | 'pivot' | 'kill';
+
+// Map frontend method IDs to backend channel names
+const METHOD_TO_CHANNEL: Record<string, string> = {
+  landing: 'landing_page',
+  survey: 'survey',
+  social: 'whatsapp',
+  marketplace: 'marketplace',
+  direct: 'whatsapp',
+};
 
 export default function ValidateModule() {
   const { idea, selectedInsight } = useIdea();
@@ -17,8 +29,60 @@ export default function ValidateModule() {
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   const [hoveredMethod, setHoveredMethod] = useState<string | null>(null);
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const { toast } = useToast();
-  const validationQuery = useValidationPlan();
+  const { experiments, saveExperiment, updateMetrics, isLoading: isSaving } = useValidationTracking();
+  const isAuthenticated = localStorage.getItem('auth_token');
+
+  // Convert selected methods to backend channels
+  const channels = Array.from(selectedMethods)
+    .map((method) => METHOD_TO_CHANNEL[method])
+    .filter(Boolean);
+
+  const validationQuery = useValidationPlan(undefined, undefined, channels.length > 0 ? channels : undefined);
+
+  // Handle save experiment
+  const handleSaveExperiment = async () => {
+    // If not authenticated, show login modal
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!idea) {
+      toast({
+        title: 'Error',
+        description: 'No idea selected',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await saveExperiment(idea, Array.from(selectedMethods), {
+        waitlist_signups: metrics.find((m) => m.id === 'signups')?.actual || 0,
+        survey_completions: metrics.find((m) => m.id === 'survey')?.actual || 0,
+        would_switch_rate: metrics.find((m) => m.id === 'switch')?.actual || 0,
+        price_tolerance_avg: metrics.find((m) => m.id === 'price')?.actual || 0,
+        community_engagement: metrics.find((m) => m.id === 'engagement')?.actual || 0,
+        reddit_upvotes: metrics.find((m) => m.id === 'reddit')?.actual || 0,
+      });
+
+      toast({
+        title: 'Experiment saved',
+        description: 'Your validation metrics have been saved to the dashboard',
+      });
+
+      setActiveTab('history');
+    } catch (error) {
+      toast({
+        title: 'Failed to save',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const communities = mapValidateCommunities(validationQuery.data) || [];
 
@@ -294,8 +358,10 @@ export default function ValidateModule() {
       {/* CHANNELS */}
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>WHERE TO SHARE</p>
-        {communities.length === 0 ? (
-          <EmptyState message={validationQuery.isFetching ? 'Loading communities�' : 'No communities returned yet.'} />
+        {validationQuery.isPending ? (
+          <LoadingSpinner message="Finding validation communities..." />
+        ) : communities.length === 0 ? (
+          <EmptyState message="No communities returned yet." />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
             {communities.map((c) => {
@@ -366,46 +432,190 @@ export default function ValidateModule() {
         </p>
       </div>
 
-      {/* Bottom actions */}
-      <div
-        className="flex flex-wrap items-center gap-3 pt-8"
-        style={{ borderTop: '1px solid var(--divider)' }}
-      >
+      {/* Tabs for current vs history */}
+      <div className="flex gap-4 mb-8" style={{ borderBottom: '1px solid var(--divider)' }}>
         <button
-          className="rounded-[12px] px-6 py-3 transition-all duration-200 active:scale-[0.97]"
+          onClick={() => setActiveTab('current')}
+          className="font-caption pb-3 transition-colors duration-200"
           style={{
-            fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 400,
-            backgroundColor: 'var(--accent-purple)', color: '#FFFFFF',
-            border: 'none', cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: activeTab === 'current' ? 500 : 400,
+            color: activeTab === 'current' ? 'var(--accent-purple)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'current' ? '2px solid var(--accent-purple)' : 'none',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0 8px',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(108,92,231,0.3)')}
-          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
         >
-          Save validation results
+          Current Run
         </button>
         <button
-          className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
+          onClick={() => setActiveTab('history')}
+          className="font-caption pb-3 transition-colors duration-200"
           style={{
-            fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 400,
-            backgroundColor: 'rgba(108,92,231,0.06)', color: 'var(--accent-purple)',
-            border: 'none', cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(108,92,231,0.12)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(108,92,231,0.06)')}
-        >
-          Export report
-        </button>
-        <button
-          className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
-          style={{
-            fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 300,
-            backgroundColor: 'transparent', color: 'var(--text-secondary)',
-            border: '1px solid var(--divider-light)', cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: activeTab === 'history' ? 500 : 400,
+            color: activeTab === 'history' ? 'var(--accent-purple)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'history' ? '2px solid var(--accent-purple)' : 'none',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0 8px',
           }}
         >
-          Start new idea
+          Experiment History ({experiments.length})
         </button>
       </div>
+
+      {/* Tab content */}
+      {activeTab === 'current' && (
+        <>
+          {/* Bottom actions */}
+          <div
+            className="flex flex-wrap items-center gap-3 pt-8"
+            style={{ borderTop: '1px solid var(--divider)' }}
+          >
+            <button
+              onClick={handleSaveExperiment}
+              disabled={isSaving || metrics.every((m) => m.actual === 0)}
+              className="rounded-[12px] px-6 py-3 transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 400,
+                backgroundColor: 'var(--accent-purple)', color: '#FFFFFF',
+                border: 'none', cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => !isSaving && (e.currentTarget.style.boxShadow = '0 4px 12px rgba(108,92,231,0.3)')}
+              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+            >
+              {isSaving ? 'Saving...' : 'Save validation results'}
+            </button>
+            <button
+              className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
+              style={{
+                fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 400,
+                backgroundColor: 'rgba(108,92,231,0.06)', color: 'var(--accent-purple)',
+                border: 'none', cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(108,92,231,0.12)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(108,92,231,0.06)')}
+            >
+              Export report
+            </button>
+            <button
+              className="rounded-[12px] px-5 py-3 transition-all duration-200 active:scale-[0.97]"
+              style={{
+                fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 300,
+                backgroundColor: 'transparent', color: 'var(--text-secondary)',
+                border: '1px solid var(--divider-light)', cursor: 'pointer',
+              }}
+            >
+              Start new idea
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* History Tab */}
+      {activeTab === 'history' && (
+        <div className="py-8">
+          {experiments.length === 0 ? (
+            <EmptyState message="No validation experiments yet. Run your first validation and save the results." />
+          ) : (
+            <div className="flex flex-col gap-4">
+              {experiments.map((exp, idx) => (
+                <div
+                  key={exp.id}
+                  className="rounded-[12px] p-5 transition-all duration-200 hover:shadow-md"
+                  style={{
+                    backgroundColor: 'var(--surface-card)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                        Experiment {experiments.length - idx}
+                      </p>
+                      <p className="font-caption" style={{ fontSize: 12 }}>
+                        {exp.created_at ? new Date(exp.created_at).toLocaleDateString() : 'Date unknown'}
+                      </p>
+                    </div>
+                    <div
+                      className="rounded-[8px] px-3 py-1.5"
+                      style={{
+                        backgroundColor:
+                          exp.verdict === 'go'
+                            ? 'rgba(45,139,117,0.06)'
+                            : exp.verdict === 'kill'
+                              ? 'rgba(224,82,82,0.06)'
+                              : 'rgba(212,136,15,0.06)',
+                        color:
+                          exp.verdict === 'go'
+                            ? '#2D8B75'
+                            : exp.verdict === 'kill'
+                              ? '#E05252'
+                              : '#D4880F',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {exp.verdict?.toUpperCase() || 'AWAITING'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>Signups</p>
+                      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {exp.waitlist_signups}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>Switch Rate</p>
+                      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {exp.would_switch_rate.toFixed(0)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>Price Tolerance</p>
+                      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>
+                        ${exp.price_tolerance_avg.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {exp.methods.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {exp.methods.map((method) => (
+                        <span
+                          key={method}
+                          className="rounded-full px-2.5 py-1 font-caption"
+                          style={{
+                            fontSize: 11,
+                            backgroundColor: 'rgba(108,92,231,0.06)',
+                            color: 'var(--accent-purple)',
+                          }}
+                        >
+                          {method}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Auth modal for saving without account */}
+      <SaveAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSaveSuccess={handleSaveExperiment}
+      />
     </div>
   );
 }

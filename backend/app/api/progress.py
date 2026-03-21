@@ -141,8 +141,6 @@ async def get_progress(
             analyses=analyses,
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error getting progress: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -194,8 +192,6 @@ async def update_progress(
             "completed_at": update_data.get(f"{update.module}_completed_at"),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error updating progress: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -268,8 +264,6 @@ async def get_cached_analyses(
             "analyses": analyses,
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error retrieving analyses: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -316,8 +310,6 @@ async def clear_analysis_cache(
             "message": f"{analysis_type} cache cleared. Will recalculate on next request.",
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error clearing cache: {e}")
         raise HTTPException(status_code=500, detail=str(e))

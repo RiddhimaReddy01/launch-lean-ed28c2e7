@@ -14,6 +14,7 @@ import {
 } from '@/lib/transform';
 import { useToast } from '@/hooks/use-toast';
 import EmptyState from '../common/EmptyState';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 const OpportunitySizing = lazy(() => import('./OpportunitySizing'));
 const DemandBehavior = lazy(() => import('./DemandBehavior'));
@@ -116,8 +117,19 @@ export default function AnalyzeModule() {
       costsQuery.data,
   );
 
+  const isLoadingInitial =
+    sizingQuery.isPending ||
+    demandQuery.isPending ||
+    competitorsQuery.isPending ||
+    rootQuery.isPending ||
+    costsQuery.isPending;
+
   return (
     <div ref={containerRef} className="scroll-reveal" style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
+      {isLoadingInitial && <LoadingSpinner message="Analyzing market opportunity..." />}
+
+      {!isLoadingInitial && (
+        <>
       {/* Sticky context strip */}
       <div
         className="sticky z-30 rounded-[12px] mb-12 p-5"
@@ -314,6 +326,8 @@ export default function AnalyzeModule() {
           Export report
         </button>
       </div>
+        </>
+      )}
     </div>
   );
 }

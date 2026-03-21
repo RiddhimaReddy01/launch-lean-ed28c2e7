@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IdeaProvider } from "@/context/IdeaContext";
 import Landing from "./pages/Landing.tsx";
+import Auth from "./pages/Auth.tsx";
 import Research from "./pages/Research.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -19,6 +20,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            {/* Research page is accessible to all (authenticated or anonymous) */}
             <Route path="/research" element={<Research />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

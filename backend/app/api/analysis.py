@@ -100,8 +100,6 @@ async def get_cached_risks(
             "assumptions": data.get("risks_assumptions"),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error retrieving risks: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -272,8 +270,6 @@ async def get_cached_pricing(
             "assumptions": data.get("pricing_assumptions"),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error retrieving pricing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -438,8 +434,6 @@ async def get_cached_financials(
             "assumptions_used": data.get("financials_assumptions"),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error retrieving financials: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -640,8 +634,6 @@ async def get_cached_acquisition(
             "assumptions": data.get("acquisition_assumptions"),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error retrieving acquisition: {e}")
         raise HTTPException(status_code=500, detail=str(e))
