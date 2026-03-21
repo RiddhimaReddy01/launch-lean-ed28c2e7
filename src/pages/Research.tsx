@@ -16,7 +16,7 @@ function StepperDot({ step, index, currentIndex, onNavigate }: { step: typeof ST
   const isActive = index === currentIndex;
   const isCompleted = index < currentIndex;
   const isFuture = index > currentIndex;
-  const isClickable = isCompleted || isActive;
+  const isClickable = true;
 
   const dotColor = isCompleted
     ? 'var(--accent-purple)'
@@ -27,7 +27,7 @@ function StepperDot({ step, index, currentIndex, onNavigate }: { step: typeof ST
   return (
     <div
       className="flex flex-col items-center"
-      style={{ opacity: isFuture ? 0.35 : 1, transition: 'opacity 300ms ease-out', cursor: isClickable ? 'pointer' : 'default' }}
+      style={{ opacity: isFuture ? 0.55 : 1, transition: 'opacity 300ms ease-out', cursor: 'pointer' }}
       onClick={() => isClickable && onNavigate(step.key)}
     >
       <div
