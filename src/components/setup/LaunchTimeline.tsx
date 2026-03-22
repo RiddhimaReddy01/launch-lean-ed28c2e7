@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { TimelinePhase } from '@/test/__mocks__/setup';
+import type { TimelinePhase } from '@/types/research-ui';
 
 export default function LaunchTimeline({ phases, onToggleTask }: { phases: TimelinePhase[]; onToggleTask: (phaseId: string, taskId: string) => void }) {
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);

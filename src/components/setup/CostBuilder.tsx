@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MOCK_TIERS, MOCK_TIER_COSTS } from '@/test/__mocks__/setup';
-import type { LaunchTier, CostCategory } from '@/test/__mocks__/setup';
+import type { LaunchTier, SetupCostCategory as CostCategory } from '@/types/research-ui';
 
 type Estimate = 'low' | 'mid' | 'high';
 
@@ -80,8 +79,8 @@ export default function CostBuilder({
   onSelectTier,
   estimates,
   onEstimateChange,
-  tiers = MOCK_TIERS,
-  tierCosts = MOCK_TIER_COSTS,
+  tiers = [],
+  tierCosts = {},
 }: {
   selectedTier: string;
   onSelectTier: (id: string) => void;
@@ -251,7 +250,7 @@ export default function CostBuilder({
           <div className="text-right">
             <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.04em', marginBottom: 4 }}>SELECTED MODEL</p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 400, color: 'var(--accent-purple)' }}>
-              {MOCK_TIERS.find((t) => t.id === selectedTier)?.title}
+              {tiers.find((t) => t.id === selectedTier)?.title}
             </p>
           </div>
         </div>

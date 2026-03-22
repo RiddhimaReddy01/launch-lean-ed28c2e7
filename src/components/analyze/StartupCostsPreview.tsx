@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { MOCK_COSTS, type StartupCosts } from '@/test/__mocks__/analyze';
+import type { StartupCosts } from '@/types/research-ui';
 
-export default function StartupCostsPreview({ data = MOCK_COSTS }: { data?: StartupCosts }) {
+export default function StartupCostsPreview({ data }: { data: StartupCosts }) {
   const [hoveredCat, setHoveredCat] = useState<string | null>(null);
   const [summaryHovered, setSummaryHovered] = useState(false);
 

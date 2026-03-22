@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { MOCK_METRICS, type MetricTarget } from '@/test/__mocks__/validate';
+import type { MetricTarget } from '@/types/research-ui';
+import { createDefaultValidationMetrics } from '@/lib/research-ui-config';
 
 type Verdict = 'awaiting' | 'go' | 'pivot' | 'kill';
 
-function MetricCard({ metric, onChange }: { metric: MetricTarget & { actual: number }; onChange: (val: number) => void }) {
+function MetricCard({ metric, onChange }: { metric: MetricTarget; onChange: (val: number) => void }) {
   const [hovered, setHovered] = useState(false);
   const pct = Math.min((metric.actual / metric.target) * 100, 100);
   const barColor = pct >= 100 ? '#2D8B75' : pct >= 50 ? '#D4880F' : 'var(--divider-light)';
@@ -13,9 +14,7 @@ function MetricCard({ metric, onChange }: { metric: MetricTarget & { actual: num
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        padding: 24,
-        borderRadius: 14,
-        backgroundColor: '#FFFFFF',
+        padding: 24, borderRadius: 14, backgroundColor: '#FFFFFF',
         boxShadow: hovered ? '0 4px 16px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.04)',
         transition: 'box-shadow 200ms ease-out',
       }}
@@ -57,7 +56,7 @@ function MetricCard({ metric, onChange }: { metric: MetricTarget & { actual: num
   );
 }
 
-function DerivedSignals({ metrics }: { metrics: (MetricTarget & { actual: number })[] }) {
+function DerivedSignals({ metrics }: { metrics: MetricTarget[] }) {
   const signups = metrics.find((m) => m.id === 'signups');
   const switchRate = metrics.find((m) => m.id === 'switch');
   const price = metrics.find((m) => m.id === 'price');
@@ -113,7 +112,7 @@ function VerdictCard({ verdict, reasoning }: { verdict: Verdict; reasoning: stri
 }
 
 export default function ExperimentDashboard() {
-  const [metrics, setMetrics] = useState(MOCK_METRICS.map((m) => ({ ...m })));
+  const [metrics, setMetrics] = useState<MetricTarget[]>(createDefaultValidationMetrics());
 
   const updateMetric = (id: string, val: number) => {
     setMetrics((prev) => prev.map((m) => (m.id === id ? { ...m, actual: val } : m)));
@@ -128,18 +127,18 @@ export default function ExperimentDashboard() {
     if (!hasData) return { verdict: 'awaiting' as Verdict, reasoning: 'Enter your experiment results above to get a recommendation.' };
 
     if (signups >= 150 && switchRate >= 60 && price >= 8)
-      return { verdict: 'go' as Verdict, reasoning: 'Strong demand signal with healthy price tolerance. The market is showing clear willingness to adopt. Move forward with confidence.' };
+      return { verdict: 'go' as Verdict, reasoning: 'Strong demand signal with healthy price tolerance. Move forward with confidence.' };
 
     if (signups < 30 && switchRate < 30)
       return { verdict: 'kill' as Verdict, reasoning: 'Low interest across channels. Consider a fundamentally different value proposition or target market.' };
 
     if (signups >= 80 && switchRate >= 40)
-      return { verdict: 'pivot' as Verdict, reasoning: 'Moderate interest detected but not strong enough for a full launch. Consider refining your positioning, adjusting pricing, or targeting a narrower segment.' };
+      return { verdict: 'pivot' as Verdict, reasoning: 'Moderate interest — refine positioning, adjust pricing, or narrow the segment.' };
 
     if (price < 6 && signups > 50)
-      return { verdict: 'pivot' as Verdict, reasoning: 'Strong interest but low price tolerance — consider repositioning your pricing strategy or reducing costs.' };
+      return { verdict: 'pivot' as Verdict, reasoning: 'Strong interest but low price tolerance — consider repositioning pricing.' };
 
-    return { verdict: 'pivot' as Verdict, reasoning: 'Mixed signals. Some interest exists but key metrics need improvement before investing further.' };
+    return { verdict: 'pivot' as Verdict, reasoning: 'Mixed signals. Some interest exists but key metrics need improvement.' };
   }, [metrics]);
 
   return (

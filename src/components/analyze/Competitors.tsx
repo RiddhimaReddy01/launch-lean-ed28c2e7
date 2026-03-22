@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { MOCK_COMPETITORS } from '@/test/__mocks__/analyze';
-import type { Competitor } from '@/test/__mocks__/analyze';
+import type { Competitor } from '@/types/research-ui';
 
 function CompetitorRow({ comp }: { comp: Competitor }) {
   const [open, setOpen] = useState(false);
@@ -127,7 +126,7 @@ function CompetitorRow({ comp }: { comp: Competitor }) {
   );
 }
 
-export default function Competitors({ competitors = MOCK_COMPETITORS }: { competitors?: Competitor[] }) {
+export default function Competitors({ competitors = [] }: { competitors?: Competitor[] }) {
   return (
     <div className="flex flex-col gap-3">
       {competitors.map((c) => (

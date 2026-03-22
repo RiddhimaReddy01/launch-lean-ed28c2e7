@@ -1,11 +1,12 @@
-import { MOCK_TIERS, MOCK_TEAM } from '@/test/__mocks__/setup';
-import type { TimelinePhase } from '@/test/__mocks__/setup';
+import type { TimelinePhase, LaunchTier, TeamRole } from '@/types/research-ui';
 
 interface PlanSummaryProps {
   selectedTier: string;
   currentTotal: number;
   includedRoles: Set<string>;
   phases: TimelinePhase[];
+  tiers?: LaunchTier[];
+  team?: TeamRole[];
 }
 
 function formatCurrency(n: number): string {
@@ -13,13 +14,13 @@ function formatCurrency(n: number): string {
   return `$${n.toLocaleString()}`;
 }
 
-export default function PlanSummary({ selectedTier, currentTotal, includedRoles, phases }: PlanSummaryProps) {
-  const tier = MOCK_TIERS.find((t) => t.id === selectedTier);
+export default function PlanSummary({ selectedTier, currentTotal, includedRoles, phases, tiers = [], team = [] }: PlanSummaryProps) {
+  const tier = tiers.find((t) => t.id === selectedTier);
   const teamCount = includedRoles.size;
   const completedTasks = phases.reduce((sum, p) => sum + p.tasks.filter((t) => t.completed).length, 0);
   const totalTasks = phases.reduce((sum, p) => sum + p.tasks.length, 0);
 
-  const teamRoles = MOCK_TEAM.filter((r) => includedRoles.has(r.id));
+  const teamRoles = team.filter((r) => includedRoles.has(r.id));
   const teamLabel = teamRoles.length > 0
     ? teamRoles.map((r) => r.title).join(', ')
     : 'No roles selected yet';
