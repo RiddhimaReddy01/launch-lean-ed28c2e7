@@ -35,6 +35,25 @@ async def discover_insights(
     req: DiscoverRequest,
     user: dict | None = Depends(optional_user),
 ):
+    # TEST: Return immediately without processing
+    return DiscoverResponse(
+        sources=[],
+        insights=[Insight(
+            id="test_1",
+            type="pain_point",
+            title="Test insight - checking if endpoint works",
+            score=5.0,
+            frequency_score=5,
+            intensity_score=5,
+            willingness_to_pay_score=5,
+            mention_count=1,
+            evidence=[],
+            source_platforms=[],
+            audience_estimate="",
+        )]
+    )
+
+    # ORIGINAL CODE BELOW (not executed)
     # Convert Pydantic model to dict for uniform access
     decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
     loc = decomp.get("location", {})
