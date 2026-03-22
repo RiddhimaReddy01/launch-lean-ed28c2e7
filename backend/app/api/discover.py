@@ -45,36 +45,26 @@ async def discover_insights(
     # ═══ STAGE 1: DATA INGESTION ═══
     logger.info(f"Discover: ingesting data for '{business_type}' in {city}, {state}")
 
-    # 1a. Reddit posts - use targeted search queries for better relevance
+    # 1a. Reddit posts - use first search query for targeted results
     subreddits = decomp.get("subreddits", [])
     reddit_posts = []
 
-    # Build targeted Reddit search queries for pain points and opportunities
-    reddit_searches = []
+    # Use first search query (most relevant from decomposition)
     search_queries_list = decomp.get("search_queries", [])
+    reddit_search_q = ""
     if search_queries_list:
-        # Use first 2 search queries directly (most relevant)
-        reddit_searches.extend([q for q in search_queries_list[:2]])
+        reddit_search_q = search_queries_list[0]  # Use most relevant query
+    else:
+        # Fallback: build simple search query
+        reddit_search_q = f"{business_type} {city} {state}".strip()
 
-    # Add pain point and opportunity searches
-    reddit_searches.extend([
-        f"{business_type} {city} reviews problems",
-        f"{business_type} {city} complaints issues",
-        f"{business_type} {city} pain points",
-    ])
-
-    # Remove duplicates and limit
-    reddit_searches = list(dict.fromkeys(reddit_searches))[:5]
-
-    # Fetch posts from multiple searches for coverage
-    for search_q in reddit_searches:
-        if search_q.strip():
-            try:
-                raw_search_posts = await fetch_search_posts(search_q.strip(), limit=30)
-                reddit_posts.extend([extract_post_fields(p) for p in raw_search_posts])
-            except Exception as e:
-                logger.warning(f"Reddit search failed for '{search_q}': {e}")
-                continue
+    # Fetch Reddit posts
+    if reddit_search_q:
+        try:
+            raw_search_posts = await fetch_search_posts(reddit_search_q, limit=60)
+            reddit_posts = [extract_post_fields(p) for p in raw_search_posts]
+        except Exception as e:
+            logger.warning(f"Reddit search failed for '{reddit_search_q}': {e}")
 
     # 1b. Google search results via Serper
     search_queries = decomp.get("search_queries", [])
