@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_DEMAND_BEHAVIOR, type DemandBehaviorData } from '@/test/__mocks__/analyze';
+import type { DemandBehaviorData } from '@/types/research-ui';
 
 function BarIndicator({ value, max = 10, label, description }: { value: number; max?: number; label: string; description?: string }) {
   const [hovered, setHovered] = useState(false);
