@@ -1,6 +1,7 @@
 """
-Google Search via Serper.dev API.
-2,500 free searches/month, no credit card required.
+Google Search via Serper.dev API with Tavily fallback.
+Serper: 2,500 free searches/month
+Tavily: Fallback when Serper is rate-limited (limited credits)
 Returns clean JSON with organic results, snippets, and metadata.
 """
 
@@ -12,6 +13,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 SERPER_URL = "https://google.serper.dev/search"
+TAVILY_URL = "https://api.tavily.com/search"
 REQUEST_TIMEOUT = 10.0
 
 
@@ -71,6 +73,56 @@ async def serper_search(
         return []
 
 
+async def tavily_search(
+    client: httpx.AsyncClient,
+    query: str,
+    num: int = 10,
+) -> list[dict]:
+    """
+    Fallback search via Tavily.com when Serper is rate-limited.
+    Limited to 1000 free searches, use sparingly.
+    """
+    if not settings.TAVILY_API_KEY:
+        logger.debug("TAVILY_API_KEY not set, skipping fallback search")
+        return []
+
+    try:
+        resp = await client.post(
+            TAVILY_URL,
+            json={
+                "api_key": settings.TAVILY_API_KEY,
+                "query": query,
+                "max_results": num,
+                "include_answer": False,
+            },
+            timeout=REQUEST_TIMEOUT,
+        )
+
+        if resp.status_code != 200:
+            logger.warning(f"Tavily returned {resp.status_code}: {resp.text[:200]}")
+            return []
+
+        data = resp.json()
+        results_data = data.get("results", [])
+
+        results = []
+        for r in results_data:
+            results.append({
+                "title": r.get("title", ""),
+                "snippet": r.get("content", ""),
+                "link": r.get("url", ""),
+                "position": len(results) + 1,
+                "source": "tavily_search",
+            })
+
+        logger.info(f"Tavily fallback: {len(results)} results for '{query}'")
+        return results
+
+    except (httpx.TimeoutException, httpx.HTTPError) as e:
+        logger.warning(f"Tavily search failed for '{query}': {e}")
+        return []
+
+
 async def run_search_queries(
     queries: list[str],
     location: str | None = None,
@@ -78,20 +130,36 @@ async def run_search_queries(
 ) -> list[dict]:
     """
     Run multiple search queries and return combined results.
+    Tries Serper first, falls back to Tavily if Serper fails/rate-limits.
     Tags each result with the query that produced it.
     """
     all_results = []
 
     async with httpx.AsyncClient() as client:
         for query in queries:
+            # Try Serper first
             results = await serper_search(
                 client, query, num=num_per_query, location=location
             )
+
+            # Fallback to Tavily if Serper returns empty
+            if not results:
+                logger.info(f"Serper returned empty for '{query}', trying Tavily fallback...")
+                results = await tavily_search(client, query, num=num_per_query)
+
             for r in results:
                 r["query"] = query
             all_results.extend(results)
 
-    logger.info(f"Serper: {len(all_results)} results from {len(queries)} queries")
+    source_count = {}
+    for r in all_results:
+        src = r.get("source", "unknown")
+        source_count[src] = source_count.get(src, 0) + 1
+
+    logger.info(
+        f"Search results: {len(all_results)} from {len(queries)} queries. "
+        f"Sources: {source_count}"
+    )
     return all_results
 
 

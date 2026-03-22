@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Data Ingestion
     SERPER_API_KEY: str = ""
+    TAVILY_API_KEY: str = ""
 
     # Supabase
     SUPABASE_URL: str = ""
