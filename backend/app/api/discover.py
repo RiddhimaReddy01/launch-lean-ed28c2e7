@@ -229,7 +229,7 @@ def _fallback_insights(posts: list[dict]) -> dict:
                 "intensity_score": 5,
                 "willingness_to_pay_score": 4,
                 "mention_count": 0,
-                "evidence": ["Low search volume indicates potential market gap"],
+                "evidence": [{"quote": "Low search volume indicates potential market gap", "source": "analysis", "score": 0}],
                 "source_platforms": ["reddit", "search"],
                 "audience_estimate": "",
             }
@@ -268,7 +268,7 @@ def _fallback_insights(posts: list[dict]) -> dict:
                 "intensity_score": 4,
                 "willingness_to_pay_score": 3,
                 "mention_count": mention_count,
-                "evidence": [f"Found keywords: {', '.join(found_terms)}"],
+                "evidence": [{"quote": f"Found keywords: {', '.join(found_terms)}", "source": "analysis", "score": 0}],
                 "source_platforms": ["reddit", "search"],
                 "audience_estimate": "",
             })
@@ -285,7 +285,7 @@ def _fallback_insights(posts: list[dict]) -> dict:
                 "intensity_score": 4,
                 "willingness_to_pay_score": 3,
                 "mention_count": len(posts),
-                "evidence": [f"Analysis of {len(posts)} sources"],
+                "evidence": [{"quote": f"Analysis of {len(posts)} sources", "source": "analysis", "score": 0}],
                 "source_platforms": ["reddit", "search"],
                 "audience_estimate": "",
             }
