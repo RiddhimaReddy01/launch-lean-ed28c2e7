@@ -107,7 +107,12 @@ export default function SetupModule() {
 
   const insightTitle = selectedInsight?.title || 'Existing juice bars are overpriced for basic smoothies';
 
+  const isLoading = setupQuery.isLoading;
+
   const renderTab = () => {
+    if (isLoading) {
+      return <SectionSkeleton />;
+    }
     switch (activeTab) {
       case 'costs':
         return tierList.length ? (
