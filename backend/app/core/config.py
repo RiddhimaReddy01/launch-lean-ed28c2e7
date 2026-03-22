@@ -26,9 +26,9 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_KEY: str = ""
     SUPABASE_JWT_SECRET: str = ""  # JWT signing secret for token verification
 
-    # Reddit (optional, for authenticated scraping)
-    REDDIT_CLIENT_ID: str = ""
-    REDDIT_CLIENT_SECRET: str = ""
+    # Reddit (optional, for authenticated scraping) - NOT CONFIGURED
+    # REDDIT_CLIENT_ID: str = ""
+    # REDDIT_CLIENT_SECRET: str = ""
 
     # App
     FRONTEND_URL: str = "http://localhost:3000"
