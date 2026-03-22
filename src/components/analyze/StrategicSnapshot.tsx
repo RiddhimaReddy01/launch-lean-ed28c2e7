@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_STRATEGIC_SNAPSHOT, type StrategicSnapshotData } from '@/test/__mocks__/analyze';
+import type { StrategicSnapshotData } from '@/types/research-ui';
 
 function SwotQuadrant({ label, items, accentBg, accentHoverBg, accentText }: { label: string; items: string[]; accentBg: string; accentHoverBg: string; accentText: string }) {
   const [hovered, setHovered] = useState(false);
