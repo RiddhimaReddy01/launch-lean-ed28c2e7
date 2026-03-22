@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { MOCK_ROOT_CAUSES, type RootCause } from '@/test/__mocks__/analyze';
+import type { RootCause } from '@/types/research-ui';
 
-export default function RootCauses({ causes = MOCK_ROOT_CAUSES }: { causes?: RootCause[] }) {
+export default function RootCauses({ causes = [] }: { causes?: RootCause[] }) {
   const [hoveredCause, setHoveredCause] = useState<number | null>(null);
 
   return (

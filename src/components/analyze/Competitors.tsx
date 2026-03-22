@@ -126,7 +126,7 @@ function CompetitorRow({ comp }: { comp: Competitor }) {
   );
 }
 
-export default function Competitors({ competitors = MOCK_COMPETITORS }: { competitors?: Competitor[] }) {
+export default function Competitors({ competitors = [] }: { competitors?: Competitor[] }) {
   return (
     <div className="flex flex-col gap-3">
       {competitors.map((c) => (

@@ -113,7 +113,7 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function DemandBehavior({ data = MOCK_DEMAND_BEHAVIOR }: { data?: DemandBehaviorData }) {
+export default function DemandBehavior({ data }: { data: DemandBehaviorData }) {
   const { demand, usage, pricing, friction } = data;
 
   return (

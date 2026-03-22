@@ -59,7 +59,7 @@ function SwotQuadrant({ label, items, accentBg, accentHoverBg, accentText }: { l
   );
 }
 
-export default function StrategicSnapshot({ data = MOCK_STRATEGIC_SNAPSHOT }: { data?: StrategicSnapshotData }) {
+export default function StrategicSnapshot({ data }: { data: StrategicSnapshotData }) {
   const { swot, takeaways, decision, decisionReasoning } = data;
   const [hoveredTakeaway, setHoveredTakeaway] = useState<number | null>(null);
   const [decisionHovered, setDecisionHovered] = useState(false);

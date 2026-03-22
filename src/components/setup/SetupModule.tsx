@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useIdea } from '@/context/IdeaContext';
-import type { TimelinePhase } from '@/test/__mocks__/setup';
+import type { TimelinePhase } from '@/types/research-ui';
 import { useSetupPlan } from '@/hooks/use-research';
 import { mapSetupTiers, mapSetupSuppliers, mapSetupTeam, mapSetupTimeline } from '@/lib/transform';
 import { useToast } from '@/hooks/use-toast';

@@ -53,7 +53,7 @@ function StructureIndicator({ label, value, tooltip }: { label: string; value: s
   );
 }
 
-export default function MarketStructure({ data = MOCK_MARKET_STRUCTURE }: { data?: MarketStructureData }) {
+export default function MarketStructure({ data }: { data: MarketStructureData }) {
   const [fragHovered, setFragHovered] = useState(false);
 
   return (

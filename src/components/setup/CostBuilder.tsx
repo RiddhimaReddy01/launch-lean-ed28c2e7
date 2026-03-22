@@ -250,7 +250,7 @@ export default function CostBuilder({
           <div className="text-right">
             <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.04em', marginBottom: 4 }}>SELECTED MODEL</p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 400, color: 'var(--accent-purple)' }}>
-              {MOCK_TIERS.find((t) => t.id === selectedTier)?.title}
+              {tiers.find((t) => t.id === selectedTier)?.title}
             </p>
           </div>
         </div>

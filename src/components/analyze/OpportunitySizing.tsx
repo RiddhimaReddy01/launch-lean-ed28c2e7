@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { MarketSize } from '@/types/research-ui';
 
-export default function OpportunitySizing({ marketSizes }: { marketSizes: MarketSize[] }) {
+export default function OpportunitySizing({ marketSizes = [] }: { marketSizes?: MarketSize[] }) {
   const [methodOpen, setMethodOpen] = useState(false);
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
