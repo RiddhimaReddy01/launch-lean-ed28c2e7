@@ -6,7 +6,7 @@
 const rawUrl = import.meta.env.VITE_API_URL || '';
 // Strip accidental "VITE_API_URL=" prefix from misconfigured secret
 const API_BASE = rawUrl.replace(/^VITE_API_URL=/i, '').replace(/\/+$/, '') || 'https://launch-lean-backend.onrender.com';
-const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10);
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '90000', 10);
 
 export class APIError extends Error {
   constructor(
