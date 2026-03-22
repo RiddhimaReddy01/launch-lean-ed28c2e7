@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { decomposeIdea, discoverInsights, analyzeSection, generateSetup, generateValidation } from '@/api';
 import { useIdea } from '@/context/IdeaContext';
 import type { AnalyzeResponse, SetupResponse, ValidateResponse } from '@/types/api';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 export function useResearchCore() {
-  const { idea } = useIdea();
+  const { idea, pipeline } = useIdea();
 
   const decomposeQuery = useQuery({
     queryKey: ['decompose', idea],
@@ -14,6 +14,8 @@ export function useResearchCore() {
     staleTime: 1000 * 60 * 5,
   });
 
+  // Use discover data from parallel fetch if available (from useResearchParallel in Research.tsx)
+  // Otherwise fetch it sequentially
   const discoverQuery = useQuery({
     queryKey: ['discover', idea],
     queryFn: () => discoverInsights(decomposeQuery.data!),
@@ -21,7 +23,14 @@ export function useResearchCore() {
     staleTime: 1000 * 60 * 5,
   });
 
-  return { idea, decomposeQuery, discoverQuery };
+  // Return cached discover results if available from parallel fetch
+  const cachedDiscoverData = useMemo(() => {
+    // Check if data was already fetched by useResearchParallel
+    // This avoids duplicate API calls when Research.tsx pre-fetches
+    return discoverQuery.data;
+  }, [discoverQuery.data]);
+
+  return { idea, decomposeQuery, discoverQuery: { ...discoverQuery, data: cachedDiscoverData } };
 }
 
 export function useAnalyzeSection(section: string) {

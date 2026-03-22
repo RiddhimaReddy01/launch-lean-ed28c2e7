@@ -7,6 +7,8 @@ import { IdeaProvider } from "@/context/IdeaContext";
 import Landing from "./pages/Landing.tsx";
 import Auth from "./pages/Auth.tsx";
 import Research from "./pages/Research.tsx";
+import Dashboard from "./pages/Dashboard.tsx";
+import IdeaDetail from "./pages/IdeaDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,9 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             {/* Research page is accessible to all (authenticated or anonymous) */}
             <Route path="/research" element={<Research />} />
+            {/* Dashboard and saved ideas (authenticated only via component) */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/ideas/:ideaId" element={<IdeaDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

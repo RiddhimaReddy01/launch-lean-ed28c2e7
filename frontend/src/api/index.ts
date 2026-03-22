@@ -30,6 +30,7 @@ export {
   getFinancials,
   analyzeAcquisition,
   getAcquisition,
+  exportIdea,
   type SaveIdeaRequest,
   type UpdateIdeaRequest,
   type IdeaResponse,

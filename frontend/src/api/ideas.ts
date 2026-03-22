@@ -262,3 +262,23 @@ export async function getAcquisition(ideaId: string): Promise<AcquisitionAnalysi
     method: 'GET',
   });
 }
+
+/**
+ * Export idea as PDF
+ * Note: Uses raw fetch because response is a blob, not JSON
+ */
+export async function exportIdea(ideaId: string): Promise<Blob> {
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const token = localStorage.getItem('auth_token');
+
+  const res = await fetch(`${baseUrl}/api/ideas/${ideaId}/export/pdf`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error('PDF export failed');
+  }
+
+  return res.blob();
+}

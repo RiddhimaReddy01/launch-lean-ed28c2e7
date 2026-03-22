@@ -30,19 +30,30 @@ app = FastAPI(
 # Allow the Lovable frontend and local development
 origins = [
     settings.FRONTEND_URL,
+    # Local development
     "http://localhost:8080",    # Vite dev server
     "http://localhost:5173",    # Alternative Vite port
     "http://localhost:3000",    # Alternative dev port
     "http://127.0.0.1:8080",   # Localhost variants
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    # Lovable hackathon domains
+    "https://app.lovable.dev",
+    "https://preview.lovable.dev",
 ]
 # Remove empty strings and duplicates
 origins = list(set(o for o in origins if o))
 
+# For hackathon/demo: allow all origins (restrict in production)
+if settings.ENVIRONMENT == "development":
+    allow_origins = origins
+else:
+    # Production: only allow specific origins
+    allow_origins = origins if origins else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

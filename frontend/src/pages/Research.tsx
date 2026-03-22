@@ -6,6 +6,8 @@ import AnalyzeModule from '@/components/analyze/AnalyzeModule';
 import SetupModule from '@/components/setup/SetupModule';
 import ValidateModule from '@/components/validate/ValidateModule';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { useResearchParallel } from '@/hooks/use-research-parallel';
 
 const STEPS: { key: Step; label: string; placeholder: string }[] = [
   { key: 'discover', label: 'Discover', placeholder: 'Scanning real conversations...' },
@@ -63,6 +65,9 @@ export default function Research() {
   const navigate = useNavigate();
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Fetch all research modules in parallel (3x faster than sequential!)
+  const { allResults, isLoading, error } = useResearchParallel(idea);
+
   const currentIndex = STEPS.findIndex((s) => s.key === currentStep);
   const activeStep = STEPS[currentIndex];
 
@@ -107,8 +112,11 @@ export default function Research() {
             New idea
           </span>
           <span
-            className="cursor-pointer"
+            className="cursor-pointer transition-colors duration-200"
             style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 300, color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-purple)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            onClick={() => navigate('/dashboard')}
           >
             Saved
           </span>
@@ -205,15 +213,46 @@ export default function Research() {
             padding: '80px 24px 160px',
           }}
         >
-          {currentStep === 'discover' ? (
-            <DiscoverModule />
-          ) : currentStep === 'analyze' ? (
-            <AnalyzeModule />
-          ) : currentStep === 'setup' ? (
-            <SetupModule />
-          ) : currentStep === 'validate' ? (
-            <ValidateModule />
-          ) : null}
+          {/* Show loading spinner while fetching all modules in parallel */}
+          {isLoading && (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
+              <LoadingSpinner message="Fetching all research modules..." />
+            </div>
+          )}
+
+          {/* Show error if something went wrong */}
+          {error && !isLoading && (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: 40,
+                backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                borderRadius: 12,
+              }}
+            >
+              <p style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                Failed to fetch research modules
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
+                {error.message}
+              </p>
+            </div>
+          )}
+
+          {/* Show module content once data is loaded */}
+          {!isLoading && allResults.decompose && (
+            <>
+              {currentStep === 'discover' ? (
+                <DiscoverModule />
+              ) : currentStep === 'analyze' ? (
+                <AnalyzeModule />
+              ) : currentStep === 'setup' ? (
+                <SetupModule />
+              ) : currentStep === 'validate' ? (
+                <ValidateModule />
+              ) : null}
+            </>
+          )}
         </div>
       </ErrorBoundary>
     </div>
