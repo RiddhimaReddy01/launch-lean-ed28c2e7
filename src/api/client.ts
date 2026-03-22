@@ -3,7 +3,7 @@
  * Base request function used by all API modules
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://launch-lean-backend.onrender.com';
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10);
 
 export class APIError extends Error {
