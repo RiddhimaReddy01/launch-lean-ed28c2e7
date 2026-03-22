@@ -89,6 +89,9 @@ async def discover_insights(
     # Rerank/sample before LLM
     merged_sampled = _sample_posts(merged, budget=POST_BUDGET, per_group=SAMPLE_PER_GROUP)
 
+    logger.info(f"DEBUG: merged_sampled has {len(merged_sampled)} posts")
+    logger.info(f"DEBUG: sources has {len(sources)} sources")
+
     try:
         if len(merged_sampled) <= 60:
             # Single-pass: categorize + score in one go
@@ -128,8 +131,14 @@ async def discover_insights(
 
     except AllProvidersExhaustedError:
         # Heuristic fallback
+        logger.info("LLM providers exhausted, using fallback")
         fallback = _fallback_insights(merged_sampled)
         return _post_process(fallback, sources, note="fallback")
+    except Exception as e:
+        # Unexpected error - use fallback
+        logger.error(f"Unexpected error in LLM logic: {e}", exc_info=True)
+        fallback = _fallback_insights(merged_sampled)
+        return _post_process(fallback, sources, note="fallback_error")
 
     # ═══ STAGE 5: POST-PROCESSING ═══
     # Check if LLM returned empty insights; use fallback if so
