@@ -4,8 +4,7 @@
  */
 
 const rawUrl = import.meta.env.VITE_API_URL || '';
-// Strip accidental "VITE_API_URL=" prefix from misconfigured secret
-const API_BASE = rawUrl.replace(/^VITE_API_URL=/i, '').replace(/\/+$/, '') || 'https://launch-lean-backend.onrender.com';
+const API_BASE = rawUrl.replace(/^VITE_API_URL=/i, '').trim().replace(/\/+$/, '');
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '90000', 10);
 
 export class APIError extends Error {
@@ -28,6 +27,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+    if (!API_BASE) {
+      throw new Error('Missing VITE_API_URL. Set it in project settings before making API requests.');
+    }
+
     // Get auth token if available
     const token = localStorage.getItem('auth_token');
     const headers: HeadersInit = {
@@ -40,7 +45,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const url = `${API_BASE}${path}`.replace(/\/$/, '');
+    const url = `${API_BASE}${normalizedPath}`;
 
     // Log API call in development
     if (import.meta.env.DEV) {
@@ -64,7 +69,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       // Handle auth errors
       if (res.status === 401) {
         localStorage.removeItem('auth_token');
-        window.location.href = '/login';
+        window.location.href = '/auth';
       }
 
       throw new APIError(res.status, detail, `API error ${res.status}`);

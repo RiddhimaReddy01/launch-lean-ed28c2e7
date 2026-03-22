@@ -1,12 +1,10 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { Insight } from '@/test/__mocks__/discover';
+import type { Insight } from '@/types/research-ui';
 
 export type Step = 'discover' | 'analyze' | 'setup' | 'validate';
 
 interface PipelineContext {
-  /** Accumulated analysis results keyed by section */
   analysisContext: Record<string, unknown>;
-  /** Setup module results */
   setupContext: Record<string, unknown> | null;
 }
 
@@ -17,9 +15,7 @@ interface IdeaState {
   setCurrentStep: (step: Step) => void;
   selectedInsight: Insight | null;
   setSelectedInsight: (insight: Insight | null) => void;
-  /** Store analysis section result for downstream modules */
   storeAnalysis: (section: string, data: unknown) => void;
-  /** Store full setup result for validate module */
   storeSetup: (data: Record<string, unknown>) => void;
   pipeline: PipelineContext;
 }
