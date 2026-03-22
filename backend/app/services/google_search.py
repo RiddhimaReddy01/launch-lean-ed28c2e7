@@ -3,12 +3,15 @@ Google Search via Serper.dev API with Tavily fallback.
 Serper: 2,500 free searches/month
 Tavily: Fallback when Serper is rate-limited (limited credits)
 Returns clean JSON with organic results, snippets, and metadata.
+Runs queries in PARALLEL for speed.
 """
 
 import logging
 import httpx
+import asyncio
 
 from app.core.config import settings
+from app.services.cache_service import get_cached_search, cache_search_results, _hash_search_query
 
 logger = logging.getLogger(__name__)
 
@@ -123,33 +126,56 @@ async def tavily_search(
         return []
 
 
+async def _search_single_query(
+    client: httpx.AsyncClient,
+    query: str,
+    location: str | None = None,
+    num_per_query: int = 10,
+) -> list[dict]:
+    """Search a single query with cache + Serper + Tavily fallback."""
+    # Check cache first
+    query_hash = _hash_search_query(query, location)
+    cached = await get_cached_search(query_hash)
+    if cached:
+        logger.debug(f"Cache hit for '{query[:40]}...'")
+        return cached
+
+    # Try Serper first
+    results = await serper_search(client, query, num=num_per_query, location=location)
+
+    # Fallback to Tavily if Serper returns empty
+    if not results:
+        logger.debug(f"Serper empty for '{query}', trying Tavily fallback...")
+        results = await tavily_search(client, query, num=num_per_query)
+
+    for r in results:
+        r["query"] = query
+
+    # Cache the results
+    if results:
+        await cache_search_results(query_hash, results, ttl_days=7)
+
+    return results
+
+
 async def run_search_queries(
     queries: list[str],
     location: str | None = None,
     num_per_query: int = 10,
 ) -> list[dict]:
     """
-    Run multiple search queries and return combined results.
+    Run multiple search queries in PARALLEL for speed.
     Tries Serper first, falls back to Tavily if Serper fails/rate-limits.
     Tags each result with the query that produced it.
     """
-    all_results = []
-
     async with httpx.AsyncClient() as client:
-        for query in queries:
-            # Try Serper first
-            results = await serper_search(
-                client, query, num=num_per_query, location=location
-            )
-
-            # Fallback to Tavily if Serper returns empty
-            if not results:
-                logger.info(f"Serper returned empty for '{query}', trying Tavily fallback...")
-                results = await tavily_search(client, query, num=num_per_query)
-
-            for r in results:
-                r["query"] = query
-            all_results.extend(results)
+        # Run all queries in parallel instead of sequential
+        search_tasks = [
+            _search_single_query(client, q, location=location, num_per_query=num_per_query)
+            for q in queries
+        ]
+        search_results = await asyncio.gather(*search_tasks)
+        all_results = [r for results in search_results for r in results]
 
     source_count = {}
     for r in all_results:
@@ -157,7 +183,7 @@ async def run_search_queries(
         source_count[src] = source_count.get(src, 0) + 1
 
     logger.info(
-        f"Search results: {len(all_results)} from {len(queries)} queries. "
+        f"Parallel search: {len(all_results)} results from {len(queries)} queries. "
         f"Sources: {source_count}"
     )
     return all_results

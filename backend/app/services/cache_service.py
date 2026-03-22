@@ -182,3 +182,82 @@ def _hash_idea(idea: str) -> str:
     import hashlib
 
     return hashlib.sha256(idea.lower().encode()).hexdigest()[:16]
+
+
+# ═══ SEARCH RESULTS CACHE ═══
+
+async def get_cached_search(
+    query_hash: str,
+) -> Optional[list[dict]]:
+    """
+    Get cached search results by query hash.
+    Returns None if cache miss or expired.
+    """
+    if not supabase:
+        return None
+
+    try:
+        result = (
+            supabase.table("search_results_cache")
+            .select("results, expires_at")
+            .eq("query_hash", query_hash)
+            .single()
+            .execute()
+        )
+
+        if not result.data:
+            return None
+
+        # Check expiration
+        expires_at = datetime.fromisoformat(result.data["expires_at"])
+        if datetime.utcnow() > expires_at:
+            await delete_search_cache(query_hash)
+            return None
+
+        return result.data.get("results", [])
+
+    except Exception as e:
+        logger.debug(f"Search cache lookup failed: {e}")
+        return None
+
+
+async def cache_search_results(
+    query_hash: str,
+    results: list[dict],
+    ttl_days: int = 7,
+):
+    """Store search results in cache."""
+    if not supabase:
+        return
+
+    try:
+        supabase.table("search_results_cache").upsert(
+            {
+                "query_hash": query_hash,
+                "results": results,
+                "created_at": datetime.utcnow().isoformat(),
+                "expires_at": (datetime.utcnow() + timedelta(days=ttl_days)).isoformat(),
+            }
+        ).execute()
+        logger.debug(f"Cached {len(results)} search results")
+    except Exception as e:
+        logger.debug(f"Search cache store failed: {e}")
+
+
+async def delete_search_cache(query_hash: str):
+    """Delete expired search cache entry."""
+    if not supabase:
+        return
+
+    try:
+        supabase.table("search_results_cache").delete().eq("query_hash", query_hash).execute()
+    except Exception as e:
+        logger.debug(f"Search cache delete failed: {e}")
+
+
+def _hash_search_query(query: str, location: str | None = None) -> str:
+    """Hash search query + location for cache key."""
+    import hashlib
+
+    search_key = f"{query.lower()}:{(location or '').lower()}"
+    return hashlib.sha256(search_key.encode()).hexdigest()[:16]
