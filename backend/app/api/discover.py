@@ -129,8 +129,8 @@ def _post_process(scored_data: dict, sources: list[dict], note: str | None = Non
 
     insights = []
     for i, raw in enumerate(raw_insights[:12]):  # Cap at 12
-        # Normalize scores to 0-10
-        pain_score = raw.get("pain_score", 0)
+        # Normalize scores to 0-10 (check both "pain_score" and "score" keys)
+        pain_score = raw.get("pain_score", raw.get("score", 0))
         if isinstance(pain_score, (int, float)) and pain_score > 10:
             pain_score = pain_score / 10.0  # Normalize if LLM gave 0-100
 
