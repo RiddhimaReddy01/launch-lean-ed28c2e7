@@ -61,7 +61,6 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
       // Handle auth errors
       if (res.status === 401) {
-        localStorage.removeItem('auth_token');
         window.location.href = '/auth';
       }
 

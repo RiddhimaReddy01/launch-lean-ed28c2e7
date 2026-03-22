@@ -18,7 +18,7 @@ async function authRequest<T>(path: string, options: RequestInit = {}): Promise<
     throw new Error('Not authenticated. Please sign in first.');
   }
 
-  return authRequest<T>(path, {
+  return request<T>(path, {
     ...options,
     headers: {
       ...(options.headers || {}),
