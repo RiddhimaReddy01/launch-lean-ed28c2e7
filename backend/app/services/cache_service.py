@@ -191,7 +191,7 @@ async def get_cached_search(
 ) -> Optional[list[dict]]:
     """
     Get cached search results by query hash.
-    Returns None if cache miss or expired.
+    Returns None if cache miss, expired, or table doesn't exist.
     """
     if not supabase:
         return None
@@ -217,7 +217,9 @@ async def get_cached_search(
         return result.data.get("results", [])
 
     except Exception as e:
-        logger.debug(f"Search cache lookup failed: {e}")
+        # Graceful degradation if table doesn't exist - just return None (cache miss)
+        if "search_results_cache" in str(e).lower() and "not found" in str(e).lower():
+            logger.debug(f"Search cache table not created yet")
         return None
 
 
@@ -226,7 +228,7 @@ async def cache_search_results(
     results: list[dict],
     ttl_days: int = 7,
 ):
-    """Store search results in cache."""
+    """Store search results in cache (gracefully handles missing table)."""
     if not supabase:
         return
 
@@ -241,7 +243,8 @@ async def cache_search_results(
         ).execute()
         logger.debug(f"Cached {len(results)} search results")
     except Exception as e:
-        logger.debug(f"Search cache store failed: {e}")
+        # Graceful degradation if table doesn't exist
+        logger.debug(f"Search cache unavailable: {str(e)[:60]}. Continuing without search caching.")
 
 
 async def delete_search_cache(query_hash: str):
