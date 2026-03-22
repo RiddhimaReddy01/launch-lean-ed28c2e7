@@ -189,6 +189,9 @@ async def main():
     for i, idea in enumerate(QUERIES, 1):
         result = await run_all_tabs(idea, i, len(QUERIES))
         results.append(result)
+        # Small delay between queries to prevent all LLM providers from being rate-limited simultaneously
+        if i < len(QUERIES):
+            await asyncio.sleep(0.5)
 
     total_elapsed = time.time() - start_time
 
