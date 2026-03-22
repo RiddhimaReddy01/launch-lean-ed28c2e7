@@ -555,11 +555,13 @@ Return ONLY valid JSON:
 
 def setup_suppliers_user(business_type: str, city: str, state: str, tier: str, customers: list[str]) -> str:
     """User prompt: Recommend vendors for this specific business"""
+    budget_map = {'LEAN': '$30-50k', 'MID': '$75-100k', 'PREMIUM': '$150-200k'}
+    budget = budget_map.get(tier, '$unknown')
     return f"""Recommend vendors for launching a {business_type} in {city}, {state} ({tier} tier).
 
 Target customers: {', '.join(customers[:2])}
 
-Budget: ${{'LEAN': '$30-50k', 'MID': '$75-100k', 'PREMIUM': '$150-200k'}.get(tier, '$unknown')}
+Budget: ${budget}
 
 Recommend vendors for:
 - Engineering (developers, designers, QA, no-code tools)
