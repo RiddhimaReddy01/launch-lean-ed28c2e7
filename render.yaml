@@ -13,24 +13,20 @@ services:
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
     envVars:
+      # API Keys - Set these in Render Dashboard from GitHub Secrets
       - key: GROQ_API_KEY
-        fromDatabase:
-          name: GROQ_API_KEY
+        sync: false  # Manually set in Render dashboard
       - key: GEMINI_API_KEY
-        fromDatabase:
-          name: GEMINI_API_KEY
+        sync: false
       - key: SUPABASE_URL
-        fromDatabase:
-          name: SUPABASE_URL
+        sync: false
       - key: SUPABASE_ANON_KEY
-        fromDatabase:
-          name: SUPABASE_ANON_KEY
+        sync: false
       - key: SUPABASE_SERVICE_KEY
-        fromDatabase:
-          name: SUPABASE_SERVICE_KEY
+        sync: false
       - key: SERPER_API_KEY
-        fromDatabase:
-          name: SERPER_API_KEY
+        sync: false
+      # Fixed values
       - key: ENVIRONMENT
         value: production
       - key: GROQ_MODEL
