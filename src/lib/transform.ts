@@ -22,8 +22,9 @@ const slug = (val: string) => val.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 function mapType(t: string): Insight['type'] {
   const normalized = t.replace(/\s+/g, '_').toLowerCase();
-  if (normalized.includes('gap')) return 'gap';
-  if (normalized.includes('want')) return 'want';
+  if (normalized.includes('market_gap') || normalized.includes('gap')) return 'gap';
+  if (normalized.includes('unmet_want') || normalized.includes('want')) return 'want';
+  if (normalized.includes('pain_point') || normalized.includes('pain')) return 'pain';
   if (normalized.includes('trend')) return 'want';
   return 'pain';
 }
