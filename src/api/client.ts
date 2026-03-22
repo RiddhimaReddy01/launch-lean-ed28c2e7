@@ -33,17 +33,10 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       throw new Error('Missing VITE_API_URL. Set it in project settings before making API requests.');
     }
 
-    // Get auth token if available
-    const token = localStorage.getItem('auth_token');
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };
-
-    // Add auth token if available
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const url = `${API_BASE}${normalizedPath}`;
 
@@ -68,7 +61,6 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
       // Handle auth errors
       if (res.status === 401) {
-        localStorage.removeItem('auth_token');
         window.location.href = '/auth';
       }
 
