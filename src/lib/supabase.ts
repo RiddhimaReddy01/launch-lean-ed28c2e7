@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Support both Lovable Cloud naming and manual env var naming
+// Lovable Cloud injects these automatically
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_PUBLISHABLE_KEY || '';
 
