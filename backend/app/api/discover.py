@@ -130,7 +130,7 @@ def _post_process(scored_data: dict, sources: list[dict], note: str | None = Non
     insights = []
     for i, raw in enumerate(raw_insights[:12]):  # Cap at 12
         # Normalize scores to 0-10
-        pain_score = raw.get("pain_score", 0)
+        pain_score = raw.get("pain_score", raw.get("score", 0))
         if isinstance(pain_score, (int, float)) and pain_score > 10:
             pain_score = pain_score / 10.0  # Normalize if LLM gave 0-100
 
@@ -206,23 +206,28 @@ def _fallback_insights(posts: list[dict]) -> dict:
     for term in ["price", "wait", "quality", "service", "trust", "location", "app", "support", "feature"]:
         if term in full:
             keywords.append(term)
+    
+    # Cycle through insight types
+    types = ["pain_point", "unmet_want", "market_gap"]
     insights = []
     for i, term in enumerate(keywords[:5]):
+        # Calculate mention count from posts
+        mention_count = sum(1 for p in posts if term in p.get("title", "").lower() or term in p.get("body", p.get("snippet", "")).lower())
+        
         insights.append({
             "id": f"fallback_{i+1}",
-            "type": "trend",
+            "type": types[i % len(types)],  # Cycle through types
             "title": f"Frequent mention of {term}",
             "score": 5,
             "frequency_score": 5,
             "intensity_score": 4,
             "willingness_to_pay_score": 3,
-            "mention_count": 0,
+            "mention_count": mention_count,  # Use actual count
             "evidence": [],
             "source_platforms": ["reddit", "search"],
-            "audience_estimate": "unknown",
+            "audience_estimate": "",  # Empty string instead of "unknown"
         })
     return {"insights": insights}
-
 
 def _normalize_type(t: str) -> str:
     valid = {"pain_point", "unmet_want", "market_gap", "trend"}
