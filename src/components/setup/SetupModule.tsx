@@ -5,6 +5,7 @@ import { useSetupPlan } from '@/hooks/use-research';
 import { mapSetupTiers, mapSetupSuppliers, mapSetupTeam, mapSetupTimeline } from '@/lib/transform';
 import { useToast } from '@/hooks/use-toast';
 import EmptyState from '../common/EmptyState';
+import SectionSkeleton from '../analyze/SectionSkeleton';
 import CostBuilder from './CostBuilder';
 import Suppliers from './Suppliers';
 import TeamBuilder from './TeamBuilder';
