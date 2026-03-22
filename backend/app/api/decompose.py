@@ -24,61 +24,48 @@ async def decompose_idea(
     user: dict | None = Depends(optional_user),
 ):
     logger.info(f"🔵 decompose_idea called with: {req.idea}")
+
+    idea = _preclean(req.idea)
+    logger.info(f"🟢 Idea cleaned: {idea}")
+
+    # ── Stage 2: Input Cleaning ──
+    if len(idea.split()) < 3:
+        raise HTTPException(status_code=400, detail="Idea must be at least 3 words")
+
+    # Stage 2.5: Cache check
+    cached = _cache_get(idea)
+    if cached:
+        return cached
+
+    # Infer vertical & defaults before LLM
+    vertical = _infer_vertical(idea)
+    defaults = _default_domains_for_vertical(vertical)
+
+    # ── Stage 3: Build LLM Prompt ──
+    system = decompose_system()
+    user_prompt = decompose_user(idea, vertical, defaults)
+
+    # ── Stage 4: LLM Call with Fallback ──
     try:
-        idea = _preclean(req.idea)
-        logger.info(f"🟢 Idea cleaned: {idea}")
-
-        # ── Stage 2: Input Cleaning ──
-        if len(idea.split()) < 3:
-            raise HTTPException(status_code=400, detail="Idea must be at least 3 words")
-
-        # Stage 2.5: Cache check
-        cached = _cache_get(idea)
-        if cached:
-            return cached
-
-        # Infer vertical & defaults before LLM
-        vertical = _infer_vertical(idea)
-        defaults = _default_domains_for_vertical(vertical)
-
-        # ── Stage 3: Build LLM Prompt ──
-        system = decompose_system()
-        user_prompt = decompose_user(idea, vertical, defaults)
-
-        # ── Stage 4: LLM Call ──
-        try:
-            raw = await call_llm(
-                system_prompt=system,
-                user_prompt=user_prompt,
-                temperature=0.1,
-                max_tokens=800,
-                json_mode=True,
-            )
-        except (AllProvidersExhaustedError, Exception) as e:
-            # Fallback: deterministic template
-            logger.warning(f"LLM failed ({type(e).__name__}), using fallback decomposition")
-            resp = _fallback_decompose(idea, vertical, defaults)
-            _cache_set(idea, resp)
-            return resp
-
-        # ── Stage 5: Post-Processing ──
+        raw = await call_llm(
+            system_prompt=system,
+            user_prompt=user_prompt,
+            temperature=0.1,
+            max_tokens=800,
+            json_mode=True,
+        )
         resp = _post_process(raw, defaults)
-        _cache_set(idea, resp)
-        return resp
-
     except Exception as e:
-        # Catch any other exception and use fallback
-        logger.warning(f"Decompose failed ({type(e).__name__}): {str(e)[:100]}, using fallback")
+        # Fallback: deterministic template when LLM fails
+        logger.warning(f"LLM failed ({type(e).__name__}), using fallback decomposition")
         try:
-            idea = _preclean(req.idea)
-            vertical = _infer_vertical(idea)
-            defaults = _default_domains_for_vertical(vertical)
             resp = _fallback_decompose(idea, vertical, defaults)
-            _cache_set(idea, resp)
-            return resp
         except Exception as fallback_err:
             logger.error(f"Fallback also failed: {fallback_err}")
             raise HTTPException(status_code=500, detail="Could not decompose idea")
+
+    _cache_set(idea, resp)
+    return resp
 
 
 def _post_process(raw: dict, defaults: list[str]) -> DecomposeResponse:

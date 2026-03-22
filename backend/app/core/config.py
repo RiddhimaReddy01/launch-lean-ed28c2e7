@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # App
     FRONTEND_URL: str = "http://localhost:3000"
     ENVIRONMENT: str = "development"
+    CORS_ORIGINS: str = ""  # Comma-separated list of allowed origins, empty = allow all
 
     # LLM Model Selection
     GROQ_MODEL: str = "llama-3.3-70b-versatile"

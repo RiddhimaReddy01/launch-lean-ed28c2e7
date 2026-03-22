@@ -18,19 +18,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── App ──
+APP_VERSION = "1.1.0"
 app = FastAPI(
     title="LaunchLens AI API",
     description="Backend API for LaunchLens AI - startup market research platform",
-    version="1.0.0",
+    version=APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
 # ── CORS ──
-# Allow all origins for demo/hackathon (the backend is a public API)
+# For demo/hackathon: allow specific origins or all
+cors_origins = settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,7 +49,7 @@ async def root():
     return {
         "service": "LaunchLens AI API",
         "status": "healthy",
-        "version": "1.1.0",
+        "version": APP_VERSION,
         "description": "Complete startup market research & business planning platform",
         "core_endpoints": [
             "POST /api/decompose-idea",
@@ -78,7 +80,7 @@ async def root():
             "POST /api/analyze-customer-acquisition - Customer Acquisition (stores & caches)",
             "GET /api/ideas/{id}/acquisition - Retrieve cached acquisition",
         ],
-        "docs": "http://localhost:8000/docs",
+        "docs": "/docs",  # Available at the service URL
     }
 
 
@@ -95,4 +97,16 @@ async def health():
         "status": "healthy",
         "providers": checks,
         "environment": settings.ENVIRONMENT,
+    }
+
+
+# ── Exception Handlers ──
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Catch unhandled exceptions and return proper error response."""
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=exc)
+    return {
+        "status": "error",
+        "message": "Internal server error",
+        "detail": str(exc) if settings.ENVIRONMENT == "development" else None,
     }
