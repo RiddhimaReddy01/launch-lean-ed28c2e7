@@ -142,6 +142,12 @@ async def discover_insights(
         return _post_process(fallback, sources, note="fallback")
 
     # ═══ STAGE 5: POST-PROCESSING ═══
+    # Check if LLM returned empty insights; use fallback if so
+    if not scored.get("insights"):
+        logger.warning("LLM returned empty insights, using fallback")
+        fallback = _fallback_insights(merged_sampled)
+        return _post_process(fallback, sources, note="fallback_empty")
+
     return _post_process(scored, sources)
 
 
