@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_MARKET_STRUCTURE, type MarketStructureData } from '@/test/__mocks__/analyze';
+import type { MarketStructureData } from '@/types/research-ui';
 
 function StructureIndicator({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
   const [hovered, setHovered] = useState(false);
