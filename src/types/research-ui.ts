@@ -194,6 +194,8 @@ export interface ValidationMethod {
   description: string;
   effort: 'low' | 'medium' | 'high';
   speed: 'fast' | 'medium' | 'slow';
+  category?: 'build' | 'outreach' | 'social' | 'paid';
+  action?: 'lovable';
 }
 
 export interface CommunityChannel {
