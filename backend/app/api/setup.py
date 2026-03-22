@@ -23,8 +23,8 @@ async def generate_setup(
     req: SetupRequest,
     user: dict | None = Depends(optional_user),
 ):
-    decomp = req.decomposition
-    insight = req.insight
+    decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
+    insight = req.insight.model_dump() if hasattr(req.insight, 'model_dump') else req.insight
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")
