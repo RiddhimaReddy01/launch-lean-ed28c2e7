@@ -129,8 +129,8 @@ def _post_process(scored_data: dict, sources: list[dict], note: str | None = Non
 
     insights = []
     for i, raw in enumerate(raw_insights[:12]):  # Cap at 12
-        # Normalize scores to 0-10
-        pain_score = raw.get("pain_score", 0)
+        # Normalize scores to 0-10 (check both "pain_score" and "score" keys)
+        pain_score = raw.get("pain_score", raw.get("score", 0))
         if isinstance(pain_score, (int, float)) and pain_score > 10:
             pain_score = pain_score / 10.0  # Normalize if LLM gave 0-100
 
@@ -145,9 +145,12 @@ def _post_process(scored_data: dict, sources: list[dict], note: str | None = Non
                 date=ev.get("date"),
             ))
 
-        # Calculate mention count from frequency
-        freq = raw.get("frequency", raw.get("frequency_score", 0))
-        mention_count = int(freq) if isinstance(freq, (int, float)) else 0
+        # Calculate mention count from frequency or mention_count
+        mention_count_raw = raw.get("mention_count", 0)
+        if not mention_count_raw:
+            freq = raw.get("frequency", raw.get("frequency_score", 0))
+            mention_count_raw = int(freq) if isinstance(freq, (int, float)) else 0
+        mention_count = int(mention_count_raw)
 
         insight = Insight(
             id=f"ins_{i+1:03d}",
@@ -207,19 +210,21 @@ def _fallback_insights(posts: list[dict]) -> dict:
         if term in full:
             keywords.append(term)
     insights = []
+    type_cycle = ["pain_point", "unmet_want", "market_gap", "pain_point", "unmet_want"]
     for i, term in enumerate(keywords[:5]):
         insights.append({
             "id": f"fallback_{i+1}",
-            "type": "trend",
+            "type": type_cycle[i],
             "title": f"Frequent mention of {term}",
             "score": 5,
+            "pain_score": 5,
             "frequency_score": 5,
             "intensity_score": 4,
             "willingness_to_pay_score": 3,
-            "mention_count": 0,
+            "mention_count": 5,
             "evidence": [],
             "source_platforms": ["reddit", "search"],
-            "audience_estimate": "unknown",
+            "audience_estimate": "",
         })
     return {"insights": insights}
 
