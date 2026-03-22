@@ -1,10 +1,31 @@
 /**
  * Ideas management API endpoints
  * CRUD operations and advanced analysis caching
+ * Uses Supabase JWT for authentication with the Render backend
  */
 
 import { request } from './client';
+import { supabase } from '@/lib/supabase';
 
+/**
+ * Authenticated request — injects Supabase JWT into Authorization header
+ */
+async function authRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error('Not authenticated. Please sign in first.');
+  }
+
+  return request<T>(path, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
 /**
  * Idea data models (matching backend Pydantic schemas)
  */
