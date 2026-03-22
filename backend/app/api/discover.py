@@ -91,9 +91,23 @@ async def discover_insights(
 
     logger.info(f"Discover: sampled {len(merged_sampled)} posts, {len(sources)} sources")
 
-    # TEMPORARY: Use fallback to bypass LLM issues - will fix LLM integration later
-    fallback = _fallback_insights(merged_sampled)
-    return _post_process(fallback, sources, note="fallback")
+    # TEMPORARY: Return hardcoded response to debug _post_process
+    return DiscoverResponse(
+        sources=[SourceSummary(name="test", type="test", post_count=0)],
+        insights=[Insight(
+            id="test_1",
+            type="pain_point",
+            title="Test insight",
+            score=5.0,
+            frequency_score=5,
+            intensity_score=5,
+            willingness_to_pay_score=5,
+            mention_count=1,
+            evidence=[],
+            source_platforms=[],
+            audience_estimate="",
+        )]
+    )
 
     # Original LLM logic below (currently bypassed)
     try:
