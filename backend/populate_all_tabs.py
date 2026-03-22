@@ -190,12 +190,6 @@ async def main():
         result = await run_all_tabs(idea, i, len(QUERIES))
         results.append(result)
 
-        # Wait between queries - SLOW MODE to avoid LLM throttling
-        if i < len(QUERIES):
-            wait_time = 5  # 5 seconds between queries
-            print(f"\n[WAITING {wait_time}s before next query to avoid LLM throttling...]")
-            await asyncio.sleep(wait_time)
-
     total_elapsed = time.time() - start_time
 
     # ===== FINAL SUMMARY =====

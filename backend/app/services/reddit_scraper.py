@@ -128,14 +128,16 @@ async def fetch_search_posts(query: str, limit: int = 50, sort: str = "relevance
 async def _maybe_token() -> Optional[str]:
     """Fetch OAuth token if creds exist; cache it with lock for thread-safety."""
     global _token_cache
-    if not settings.REDDIT_CLIENT_ID or not settings.REDDIT_CLIENT_SECRET:
+    reddit_id = getattr(settings, 'REDDIT_CLIENT_ID', '')
+    reddit_secret = getattr(settings, 'REDDIT_CLIENT_SECRET', '')
+    if not reddit_id or not reddit_secret:
         return None
 
     async with _token_lock:
         now = asyncio.get_event_loop().time()
         if _token_cache and _token_cache[1] > now + 60:
             return _token_cache[0]
-        creds = b64encode(f"{settings.REDDIT_CLIENT_ID}:{settings.REDDIT_CLIENT_SECRET}".encode()).decode()
+        creds = b64encode(f"{reddit_id}:{reddit_secret}".encode()).decode()
         headers = {
             "Authorization": f"Basic {creds}",
             "Content-Type": "application/x-www-form-urlencoded",
