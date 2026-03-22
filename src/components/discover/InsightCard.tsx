@@ -181,9 +181,11 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
             ))}
           </div>
 
-          <p className="font-caption mt-4" style={{ fontSize: 12 }}>
-            Audience: {insight.audienceEstimate}
-          </p>
+          {insight.audienceEstimate && (
+            <p className="font-caption mt-4" style={{ fontSize: 12 }}>
+              Audience: {insight.audienceEstimate}
+            </p>
+          )}
 
           <div className="flex items-center gap-3 mt-5 flex-wrap">
             <button

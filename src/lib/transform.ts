@@ -22,8 +22,9 @@ const slug = (val: string) => val.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 function mapType(t: string): Insight['type'] {
   const normalized = t.replace(/\s+/g, '_').toLowerCase();
-  if (normalized.includes('gap')) return 'gap';
-  if (normalized.includes('want')) return 'want';
+  if (normalized.includes('market_gap') || normalized.includes('gap')) return 'gap';
+  if (normalized.includes('unmet_want') || normalized.includes('want')) return 'want';
+  if (normalized.includes('pain_point') || normalized.includes('pain')) return 'pain';
   if (normalized.includes('trend')) return 'want';
   return 'pain';
 }
@@ -42,18 +43,29 @@ export function mapDiscoverSources(sources: DiscoverSource[]): Source[] {
 export function mapDiscoverInsights(insights: DiscoverInsight[], sources: Source[]): Insight[] {
   return insights.map((ins) => {
     const sourceIds = sources.map((s) => s.id);
+
+    // Backend sends scores on 0-10 scale already; just round for display
+    const rawScore = ins.score || 0;
+    const score = Math.round(Math.min(10, Math.max(0, rawScore)));
+
+    const freq = ins.frequency_score || 0;
+    const intensity = ins.intensity_score || 0;
+    const monetization = ins.willingness_to_pay_score || 0;
+
     return {
       id: ins.id,
       type: mapType(ins.type),
       title: ins.title,
-      score: Math.round((ins.score || 0) * 10),
-      frequency: Math.round(ins.frequency_score || 0),
-      intensity: Math.round(ins.intensity_score || 0),
-      monetization: Math.round(ins.willingness_to_pay_score || 0),
+      score,
+      frequency: Math.round(Math.min(10, Math.max(0, freq))),
+      intensity: Math.round(Math.min(10, Math.max(0, intensity))),
+      monetization: Math.round(Math.min(10, Math.max(0, monetization))),
       mentionCount: ins.mention_count || 0,
       sourceIds,
       sourcePlatforms: ins.source_platforms || [],
-      audienceEstimate: ins.audience_estimate || '',
+      audienceEstimate: ins.audience_estimate && ins.audience_estimate !== 'unknown'
+        ? ins.audience_estimate
+        : '',
       evidence: (ins.evidence || []).map((ev, idx) => ({
         quote: ev.quote,
         sourceId: sourceIds[idx] || sourceIds[0] || 'source',
@@ -74,12 +86,36 @@ export function summarizeDiscover(insights: Insight[], sources: Source[]) {
 
 export function mapOpportunity(raw: AnalyzeResponse | undefined): MarketSize[] | undefined {
   if (!raw?.data) return undefined;
-  const { tam, sam, som } = raw.data;
-  const pick = (obj: any) => ({
-    value: obj?.formatted || obj?.value?.toLocaleString?.() || 'N/A',
-    rawValue: obj?.value || 0,
-    methodology: obj?.methodology || '',
-  });
+  const d = raw.data;
+
+  // The LLM may return tam/sam/som as top-level keys or nested under various names
+  const findMarketField = (key: string) => {
+    // Direct key
+    if (d[key] && typeof d[key] === 'object') return d[key];
+    // Uppercase
+    if (d[key.toUpperCase()] && typeof d[key.toUpperCase()] === 'object') return d[key.toUpperCase()];
+    return null;
+  };
+
+  const tam = findMarketField('tam');
+  const sam = findMarketField('sam');
+  const som = findMarketField('som');
+
+  // If none of the three exist, the LLM returned a different shape
+  if (!tam && !sam && !som) return undefined;
+
+  const pick = (obj: any) => {
+    if (!obj) return { value: 'N/A', rawValue: 0, methodology: '' };
+    const rawVal = obj.value || obj.dollar_figure || obj.amount || 0;
+    const numVal = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/[^0-9.]/g, '')) || 0;
+    const formatted = obj.formatted || (numVal > 0 ? `$${numVal.toLocaleString()}` : 'N/A');
+    return {
+      value: formatted,
+      rawValue: numVal,
+      methodology: obj.methodology || obj.explanation || '',
+    };
+  };
+
   return [
     { acronym: 'TAM', label: 'Total Addressable Market', ...pick(tam) },
     { acronym: 'SAM', label: 'Serviceable Addressable Market', ...pick(sam) },
