@@ -46,7 +46,7 @@ class UpdateIdeaRequest(BaseModel):
     discover: Optional[dict] = None
     analyze: Optional[dict] = None
     setup: Optional[dict] = None
-    validation: Optional[dict] = None
+    validate: Optional[dict] = None
     swot: Optional[dict] = None
     risks: Optional[dict] = None
     financials: Optional[dict] = None

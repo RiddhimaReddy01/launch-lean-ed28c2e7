@@ -38,6 +38,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Startup Validation ──
+@app.on_event("startup")
+async def validate_environment():
+    """Validate required environment variables at startup."""
+    required_vars = {
+        "GROQ_API_KEY": settings.GROQ_API_KEY,
+        "SERPER_API_KEY": settings.SERPER_API_KEY,
+        "SUPABASE_URL": settings.SUPABASE_URL,
+        "SUPABASE_SERVICE_KEY": settings.SUPABASE_SERVICE_KEY,
+        "SUPABASE_JWT_SECRET": settings.SUPABASE_JWT_SECRET,
+    }
+
+    missing = [name for name, value in required_vars.items() if not value]
+    if missing:
+        logger.error(f"❌ Missing required environment variables: {', '.join(missing)}")
+        raise RuntimeError(f"Cannot start: missing {len(missing)} required env vars. Set these before startup.")
+
+    logger.info("✅ All required environment variables configured")
+
 # ── Routes ──
 # All routes centralized in app/api/router.py for cleaner main.py
 app.include_router(router)
@@ -87,14 +106,29 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint for Render uptime monitoring."""
+    from app.core.supabase import get_supabase
+
     checks = {
         "groq_key": bool(settings.GROQ_API_KEY),
         "gemini_key": bool(settings.GEMINI_API_KEY),
         "serper_key": bool(settings.SERPER_API_KEY),
         "supabase_url": bool(settings.SUPABASE_URL),
+        "database": False,
     }
+
+    # Check database connectivity
+    try:
+        supabase = get_supabase()
+        # Simple query to verify connection
+        supabase.table("ideas").select("id").limit(1).execute()
+        checks["database"] = True
+    except Exception as e:
+        logger.warning(f"Database health check failed: {e}")
+        checks["database"] = False
+
+    status = "healthy" if all(checks.values()) else "degraded"
     return {
-        "status": "healthy",
+        "status": status,
         "providers": checks,
         "environment": settings.ENVIRONMENT,
     }
