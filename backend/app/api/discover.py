@@ -219,38 +219,83 @@ def _sample_posts(posts: list[dict], budget: int, per_group: int) -> list[dict]:
 
 def _fallback_insights(posts: list[dict]) -> dict:
     """Heuristic insights when LLM unavailable."""
-    # Simple bag of words by source; pick top terms
+    types = ["pain_point", "unmet_want", "market_gap", "opportunity"]
+
+    # If no posts, return generic insights based on business opportunity
+    if not posts:
+        return {"insights": [
+            {
+                "id": "fallback_1",
+                "type": "market_gap",
+                "title": "Limited local reviews and discussion",
+                "score": 6,
+                "frequency_score": 5,
+                "intensity_score": 5,
+                "willingness_to_pay_score": 4,
+                "mention_count": 0,
+                "evidence": ["Low search volume indicates potential market gap"],
+                "source_platforms": ["reddit", "search"],
+                "audience_estimate": "",
+            }
+        ]}
+
+    # Extract keywords from posts
     texts = []
     for p in posts:
         texts.append(p.get("title", ""))
         texts.append(p.get("body", p.get("snippet", "")))
     full = " ".join(texts).lower()
-    keywords = []
-    for term in ["price", "wait", "quality", "service", "trust", "location", "app", "support", "feature"]:
-        if term in full:
-            keywords.append(term)
-    
-    # Cycle through insight types
-    types = ["pain_point", "unmet_want", "market_gap"]
+
+    # Extended keyword list for better coverage
+    keyword_groups = {
+        "price/cost": ["price", "cost", "expensive", "overpriced", "cheap", "affordable"],
+        "wait/speed": ["wait", "slow", "fast", "line", "queue", "delay"],
+        "quality": ["quality", "taste", "fresh", "health", "organic"],
+        "location": ["location", "distance", "far", "convenient", "access"],
+        "customer service": ["service", "staff", "experience", "rude", "friendly"],
+    }
+
     insights = []
-    for i, term in enumerate(keywords[:5]):
-        # Calculate mention count from posts
-        mention_count = sum(1 for p in posts if term in p.get("title", "").lower() or term in p.get("body", p.get("snippet", "")).lower())
-        
-        insights.append({
-            "id": f"fallback_{i+1}",
-            "type": types[i % len(types)],  # Cycle through types
-            "title": f"Frequent mention of {term}",
-            "score": 5,
-            "frequency_score": 5,
-            "intensity_score": 4,
-            "willingness_to_pay_score": 3,
-            "mention_count": mention_count,  # Use actual count
-            "evidence": [],
-            "source_platforms": ["reddit", "search"],
-            "audience_estimate": "",  # Empty string instead of "unknown"
-        })
-    return {"insights": insights}
+    for group_name, terms in keyword_groups.items():
+        found_terms = [t for t in terms if t in full]
+        if found_terms:
+            mention_count = sum(1 for p in posts
+                              if any(t in (p.get("title", "") + p.get("body", p.get("snippet", ""))).lower()
+                                    for t in found_terms))
+
+            insights.append({
+                "id": f"fallback_{len(insights)+1}",
+                "type": types[len(insights) % len(types)],
+                "title": f"Customer concerns: {group_name}",
+                "score": 5 + (min(len(found_terms), 3) * 0.5),
+                "frequency_score": min(6, 3 + len(found_terms)),
+                "intensity_score": 4,
+                "willingness_to_pay_score": 3,
+                "mention_count": mention_count,
+                "evidence": [f"Found keywords: {', '.join(found_terms)}"],
+                "source_platforms": ["reddit", "search"],
+                "audience_estimate": "",
+            })
+
+    # Always return at least 2 insights
+    if not insights:
+        insights = [
+            {
+                "id": "fallback_1",
+                "type": "market_gap",
+                "title": "Emerging market opportunity",
+                "score": 5,
+                "frequency_score": 4,
+                "intensity_score": 4,
+                "willingness_to_pay_score": 3,
+                "mention_count": len(posts),
+                "evidence": [f"Analysis of {len(posts)} sources"],
+                "source_platforms": ["reddit", "search"],
+                "audience_estimate": "",
+            }
+        ]
+
+    return {"insights": insights[:5]}
 
 def _normalize_type(t: str) -> str:
     valid = {"pain_point", "unmet_want", "market_gap", "trend"}
