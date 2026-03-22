@@ -116,13 +116,21 @@ def build_discover_queries(decomposition: dict) -> list[str]:
         domains = default_domains
 
     queries = []
-    for d in domains[:6]:
+
+    # Top priority: site searches on review platforms (most relevant)
+    review_domains = [d for d in domains[:6] if any(r in d for r in ["yelp", "google", "trustpilot", "tripadvisor"])]
+    for d in review_domains[:3]:
         queries.append(f"{btype} {city} {state} site:{d}")
 
-    # Add a general pain/complaint query
-    queries.append(f"{btype} {city} {state} complaints OR overpriced OR bad experience")
-    # Add a pricing/alternatives query
-    queries.append(f"{btype} alternative {city} {state} cheaper OR best value")
+    # Pain point queries (high signal for market research)
+    queries.append(f'"{btype}" "{city}" complaints bad reviews -site:reddit.com')
+    queries.append(f'"{btype}" "{city}" problems issues frustration')
+    queries.append(f'"{btype}" "{city}" alternatives competitors pricing')
+
+    # Local and pricing queries
+    queries.append(f"best {btype} near {city} {state}")
+    queries.append(f"{btype} {city} {state} prices cost overpriced")
+    queries.append(f"{btype} {city} {state} hours location wait times")
 
     return queries[:8]
 

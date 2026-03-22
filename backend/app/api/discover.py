@@ -45,14 +45,36 @@ async def discover_insights(
     # ═══ STAGE 1: DATA INGESTION ═══
     logger.info(f"Discover: ingesting data for '{business_type}' in {city}, {state}")
 
-    # 1a. Reddit posts (parallel across subreddits)
+    # 1a. Reddit posts - use targeted search queries for better relevance
     subreddits = decomp.get("subreddits", [])
-    # Skip subreddit fetch to avoid 403 noise; use global Reddit search only
-    search_q = f"{business_type} {city} {state}".strip()
     reddit_posts = []
-    if search_q:
-        raw_search_posts = await fetch_search_posts(search_q, limit=60)
-        reddit_posts = [extract_post_fields(p) for p in raw_search_posts]
+
+    # Build targeted Reddit search queries for pain points and opportunities
+    reddit_searches = []
+    search_queries_list = decomp.get("search_queries", [])
+    if search_queries_list:
+        # Use first 2 search queries directly (most relevant)
+        reddit_searches.extend([q for q in search_queries_list[:2]])
+
+    # Add pain point and opportunity searches
+    reddit_searches.extend([
+        f"{business_type} {city} reviews problems",
+        f"{business_type} {city} complaints issues",
+        f"{business_type} {city} pain points",
+    ])
+
+    # Remove duplicates and limit
+    reddit_searches = list(dict.fromkeys(reddit_searches))[:5]
+
+    # Fetch posts from multiple searches for coverage
+    for search_q in reddit_searches:
+        if search_q.strip():
+            try:
+                raw_search_posts = await fetch_search_posts(search_q.strip(), limit=30)
+                reddit_posts.extend([extract_post_fields(p) for p in raw_search_posts])
+            except Exception as e:
+                logger.warning(f"Reddit search failed for '{search_q}': {e}")
+                continue
 
     # 1b. Google search results via Serper
     search_queries = decomp.get("search_queries", [])
