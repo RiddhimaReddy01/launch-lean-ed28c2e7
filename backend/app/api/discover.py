@@ -35,7 +35,8 @@ async def discover_insights(
     req: DiscoverRequest,
     user: dict | None = Depends(optional_user),
 ):
-    decomp = req.decomposition.model_dump()
+    # Convert Pydantic model to dict for uniform access
+    decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")

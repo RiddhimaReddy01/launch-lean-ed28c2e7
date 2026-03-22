@@ -1,10 +1,31 @@
 /**
  * Ideas management API endpoints
  * CRUD operations and advanced analysis caching
+ * Uses Supabase JWT for authentication with the Render backend
  */
 
 import { request } from './client';
+import { supabase } from '@/lib/supabase';
 
+/**
+ * Authenticated request — injects Supabase JWT into Authorization header
+ */
+async function authRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error('Not authenticated. Please sign in first.');
+  }
+
+  return authRequest<T>(path, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
 /**
  * Idea data models (matching backend Pydantic schemas)
  */
@@ -83,7 +104,7 @@ export interface IdeaDetailResponse {
  * Save a new idea with research data
  */
 export async function saveIdea(data: SaveIdeaRequest): Promise<IdeaResponse> {
-  return request<IdeaResponse>('/api/ideas', {
+  return authRequest<IdeaResponse>('/api/ideas', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -102,7 +123,7 @@ export async function listIdeas(
   params.append('skip', String(skip));
   params.append('limit', String(limit));
 
-  return request<IdeaResponse[]>(`/api/ideas?${params}`, {
+  return authRequest<IdeaResponse[]>(`/api/ideas?${params}`, {
     method: 'GET',
   });
 }
@@ -111,7 +132,7 @@ export async function listIdeas(
  * Get a specific idea with all its research data
  */
 export async function getIdea(ideaId: string): Promise<IdeaDetailResponse> {
-  return request<IdeaDetailResponse>(`/api/ideas/${ideaId}`, {
+  return authRequest<IdeaDetailResponse>(`/api/ideas/${ideaId}`, {
     method: 'GET',
   });
 }
@@ -120,7 +141,7 @@ export async function getIdea(ideaId: string): Promise<IdeaDetailResponse> {
  * Update specific sections of an idea
  */
 export async function updateIdea(ideaId: string, data: UpdateIdeaRequest): Promise<IdeaDetailResponse> {
-  return request<IdeaDetailResponse>(`/api/ideas/${ideaId}`, {
+  return authRequest<IdeaDetailResponse>(`/api/ideas/${ideaId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
@@ -130,7 +151,7 @@ export async function updateIdea(ideaId: string, data: UpdateIdeaRequest): Promi
  * Delete an idea
  */
 export async function deleteIdea(ideaId: string): Promise<{ status: string; id: string; message: string }> {
-  return request<{ status: string; id: string; message: string }>(`/api/ideas/${ideaId}`, {
+  return authRequest<{ status: string; id: string; message: string }>(`/api/ideas/${ideaId}`, {
     method: 'DELETE',
   });
 }
@@ -179,7 +200,7 @@ export async function analyzeRisks(
   decomposition?: unknown,
   analysis_context?: unknown,
 ): Promise<RiskAnalysisResponse> {
-  return request<RiskAnalysisResponse>('/api/analyze-risks', {
+  return authRequest<RiskAnalysisResponse>('/api/analyze-risks', {
     method: 'POST',
     body: JSON.stringify({ idea_id: ideaId, decomposition, analysis_context }),
   });
@@ -189,7 +210,7 @@ export async function analyzeRisks(
  * Get cached risk analysis for an idea
  */
 export async function getRisks(ideaId: string): Promise<RiskAnalysisResponse> {
-  return request<RiskAnalysisResponse>(`/api/ideas/${ideaId}/risks`, {
+  return authRequest<RiskAnalysisResponse>(`/api/ideas/${ideaId}/risks`, {
     method: 'GET',
   });
 }
@@ -202,7 +223,7 @@ export async function analyzePricing(
   decomposition?: unknown,
   analysis_context?: unknown,
 ): Promise<PricingAnalysisResponse> {
-  return request<PricingAnalysisResponse>('/api/analyze-pricing', {
+  return authRequest<PricingAnalysisResponse>('/api/analyze-pricing', {
     method: 'POST',
     body: JSON.stringify({ idea_id: ideaId, decomposition, analysis_context }),
   });
@@ -212,7 +233,7 @@ export async function analyzePricing(
  * Get cached pricing analysis for an idea
  */
 export async function getPricing(ideaId: string): Promise<PricingAnalysisResponse> {
-  return request<PricingAnalysisResponse>(`/api/ideas/${ideaId}/pricing`, {
+  return authRequest<PricingAnalysisResponse>(`/api/ideas/${ideaId}/pricing`, {
     method: 'GET',
   });
 }
@@ -225,7 +246,7 @@ export async function analyzeFinancials(
   decomposition?: unknown,
   analysis_context?: unknown,
 ): Promise<FinancialsAnalysisResponse> {
-  return request<FinancialsAnalysisResponse>('/api/analyze-financials', {
+  return authRequest<FinancialsAnalysisResponse>('/api/analyze-financials', {
     method: 'POST',
     body: JSON.stringify({ idea_id: ideaId, decomposition, analysis_context }),
   });
@@ -235,7 +256,7 @@ export async function analyzeFinancials(
  * Get cached financial analysis for an idea
  */
 export async function getFinancials(ideaId: string): Promise<FinancialsAnalysisResponse> {
-  return request<FinancialsAnalysisResponse>(`/api/ideas/${ideaId}/financials`, {
+  return authRequest<FinancialsAnalysisResponse>(`/api/ideas/${ideaId}/financials`, {
     method: 'GET',
   });
 }
@@ -248,7 +269,7 @@ export async function analyzeAcquisition(
   decomposition?: unknown,
   analysis_context?: unknown,
 ): Promise<AcquisitionAnalysisResponse> {
-  return request<AcquisitionAnalysisResponse>('/api/analyze-customer-acquisition', {
+  return authRequest<AcquisitionAnalysisResponse>('/api/analyze-customer-acquisition', {
     method: 'POST',
     body: JSON.stringify({ idea_id: ideaId, decomposition, analysis_context }),
   });
@@ -258,7 +279,7 @@ export async function analyzeAcquisition(
  * Get cached acquisition analysis for an idea
  */
 export async function getAcquisition(ideaId: string): Promise<AcquisitionAnalysisResponse> {
-  return request<AcquisitionAnalysisResponse>(`/api/ideas/${ideaId}/acquisition`, {
+  return authRequest<AcquisitionAnalysisResponse>(`/api/ideas/${ideaId}/acquisition`, {
     method: 'GET',
   });
 }
