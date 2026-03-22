@@ -110,17 +110,66 @@ def decompose_stage2_user(
     vertical: str,
     domain_suggestions: list[str],
 ) -> str:
-    """User prompt for stage 2 with context from stage 1."""
+    """User prompt for stage 2 with vertical-specific guidance."""
     domains = ", ".join(domain_suggestions[:10])
     location_str = f"{city}, {state}" if city and state else (city or state or "nationwide")
+
+    # Vertical-specific hints
+    vertical_hints = {
+        "saas_b2b": """VERTICAL HINTS (B2B/SaaS):
+- Target customers: Business types, team sizes, roles (e.g., "product managers at startups")
+- Price tier: Per-user, annual contract, or freemium (e.g., "$100/user/year" or "free tier + premium")
+- MUST include: g2.com, capterra.com, producthunt.com (SaaS reviews)
+- Search queries: Focus on "comparison", "alternatives", "reviews", "pricing"
+Example: "product management software reviews", "best alternative to Jira", "affordable project management for teams" """,
+
+        "food_service": """VERTICAL HINTS (Food/Restaurant/Bar):
+- Target customers: Demographics + eating habits (e.g., "health-conscious professionals", "night-life seekers")
+- Price tier: Price per item/meal and order value (e.g., "$15-25 per meal" or "$50-100/subscription")
+- MUST include: yelp.com, google.com/maps, instagram.com (local discovery)
+- Search queries: Focus on "reviews", "near me", "competitors", "delivery"
+Example: "juice bar delivery San Francisco", "healthy food alternatives", "cold pressed juice competitors" """,
+
+        "local_service": """VERTICAL HINTS (Local Services):
+- Target customers: Local demographics + pain points (e.g., "busy professionals age 35-50", "elderly homeowners")
+- Price tier: Hourly rates, per-project, or subscription (e.g., "$75-150/hour" or "$20/month")
+- MUST include: yelp.com, google.com/maps, nextdoor.com, craigslist.org (local targeting)
+- Search queries: Focus on "local", "near me", "competitors", "cost"
+Example: "plumber near me", "house cleaning cost", "local tutoring services" """,
+
+        "marketplace": """VERTICAL HINTS (Marketplace/C2C):
+- Target customers: BOTH supply AND demand (e.g., "freelancers" + "companies seeking talent")
+- Price tier: Transaction fees, subscription tiers, or commission (e.g., "10% commission" or "$10/month")
+- MUST include: producthunt.com, trustpilot.com, crunchbase.com (marketplace reviews)
+- Search queries: Focus on "competitors", "user reviews", "supply availability"
+Example: "Upwork alternatives", "freelance marketplace comparison", "gig economy platforms" """,
+
+        "general": """VERTICAL HINTS (General):
+- Target customers: Be specific - include age, behavior, or needs
+- Price tier: Include currency and range (e.g., "$10-50/month" not just "premium")
+- Search queries: Target competitors, reviews, and pain points
+Example: "best alternatives to [similar product]", "[product type] reviews 2026" """,
+    }
+
+    hint = vertical_hints.get(vertical, vertical_hints["general"])
 
     return f"""Business: {business_type} in {location_str}
 Original idea: "{idea}"
 Vertical: {vertical}
 
-Recommended domains (pick 4-8): {domains}
+{hint}
 
-Extract detailed market research components for this business."""
+Recommended domains (pick 4-8 from these): {domains}
+
+EXTRACTION RULES:
+1. target_customers: 2-4 segments, be SPECIFIC (include age, behavior, or needs)
+2. price_tier: Include currency and range (e.g., "$15-25/month" not just "premium")
+3. source_domains: Pick 4-8 from recommendations, prioritize vertical-specific ones
+4. subreddits: Only if community would discuss this (can be empty)
+5. review_platforms: Relevant platforms for this business type
+6. search_queries: 5-8 specific Google searches customers would actually use
+
+Extract market research components for this {vertical} business."""
 
 
 # ═══ MODULE 1: DISCOVER ═══
