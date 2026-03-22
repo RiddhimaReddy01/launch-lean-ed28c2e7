@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MOCK_TIERS, MOCK_TIER_COSTS } from '@/test/__mocks__/setup';
-import type { LaunchTier, CostCategory } from '@/test/__mocks__/setup';
+import type { LaunchTier, SetupCostCategory as CostCategory } from '@/types/research-ui';
 
 type Estimate = 'low' | 'mid' | 'high';
 
