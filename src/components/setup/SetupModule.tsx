@@ -153,6 +153,8 @@ export default function SetupModule() {
             currentTotal={currentTotal}
             includedRoles={includedRoles}
             phases={phases}
+            tiers={tierList}
+            team={teamData}
           />
         );
     }
