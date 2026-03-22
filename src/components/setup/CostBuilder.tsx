@@ -79,8 +79,8 @@ export default function CostBuilder({
   onSelectTier,
   estimates,
   onEstimateChange,
-  tiers = MOCK_TIERS,
-  tierCosts = MOCK_TIER_COSTS,
+  tiers = [],
+  tierCosts = {},
 }: {
   selectedTier: string;
   onSelectTier: (id: string) => void;
