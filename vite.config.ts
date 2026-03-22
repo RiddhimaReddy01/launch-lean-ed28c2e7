@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Environment variables for security
+  // Build-time constants
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     __VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
