@@ -86,12 +86,36 @@ export function summarizeDiscover(insights: Insight[], sources: Source[]) {
 
 export function mapOpportunity(raw: AnalyzeResponse | undefined): MarketSize[] | undefined {
   if (!raw?.data) return undefined;
-  const { tam, sam, som } = raw.data;
-  const pick = (obj: any) => ({
-    value: obj?.formatted || obj?.value?.toLocaleString?.() || 'N/A',
-    rawValue: obj?.value || 0,
-    methodology: obj?.methodology || '',
-  });
+  const d = raw.data;
+
+  // The LLM may return tam/sam/som as top-level keys or nested under various names
+  const findMarketField = (key: string) => {
+    // Direct key
+    if (d[key] && typeof d[key] === 'object') return d[key];
+    // Uppercase
+    if (d[key.toUpperCase()] && typeof d[key.toUpperCase()] === 'object') return d[key.toUpperCase()];
+    return null;
+  };
+
+  const tam = findMarketField('tam');
+  const sam = findMarketField('sam');
+  const som = findMarketField('som');
+
+  // If none of the three exist, the LLM returned a different shape
+  if (!tam && !sam && !som) return undefined;
+
+  const pick = (obj: any) => {
+    if (!obj) return { value: 'N/A', rawValue: 0, methodology: '' };
+    const rawVal = obj.value || obj.dollar_figure || obj.amount || 0;
+    const numVal = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/[^0-9.]/g, '')) || 0;
+    const formatted = obj.formatted || (numVal > 0 ? `$${numVal.toLocaleString()}` : 'N/A');
+    return {
+      value: formatted,
+      rawValue: numVal,
+      methodology: obj.methodology || obj.explanation || '',
+    };
+  };
+
   return [
     { acronym: 'TAM', label: 'Total Addressable Market', ...pick(tam) },
     { acronym: 'SAM', label: 'Serviceable Addressable Market', ...pick(sam) },
