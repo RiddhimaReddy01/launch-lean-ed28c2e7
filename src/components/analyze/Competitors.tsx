@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { MOCK_COMPETITORS } from '@/test/__mocks__/analyze';
-import type { Competitor } from '@/test/__mocks__/analyze';
+import type { Competitor } from '@/types/research-ui';
 
 function CompetitorRow({ comp }: { comp: Competitor }) {
   const [open, setOpen] = useState(false);
