@@ -99,7 +99,7 @@ export default function IdeaDetail() {
 
   // Extract data
   const idea = ideaQuery.data;
-  const experiments = experimentsQuery.data || [];
+  const experiments = experimentsQuery.data?.experiments || [];
 
   if (ideaQuery.isLoading) return <LoadingSpinner message="Loading idea..." />;
   if (!idea) return <div style={{ padding: 40, textAlign: 'center' }}>Idea not found</div>;

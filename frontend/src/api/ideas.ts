@@ -268,7 +268,7 @@ export async function getAcquisition(ideaId: string): Promise<AcquisitionAnalysi
  * Note: Uses raw fetch because response is a blob, not JSON
  */
 export async function exportIdea(ideaId: string): Promise<Blob> {
-  const baseUrl = 'https://launch-lean-backend.onrender.com';
+  const baseUrl = import.meta.env.VITE_API_URL || 'https://launch-lean-backend.onrender.com';
   const token = localStorage.getItem('auth_token');
 
   const res = await fetch(`${baseUrl}/api/ideas/${ideaId}/export/pdf`, {
