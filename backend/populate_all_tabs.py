@@ -191,7 +191,7 @@ async def main():
         results.append(result)
         # Small delay between queries to prevent all LLM providers from being rate-limited simultaneously
         if i < len(QUERIES):
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.0)
 
     total_elapsed = time.time() - start_time
 

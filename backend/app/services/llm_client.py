@@ -43,14 +43,20 @@ async def call_llm(
     json_mode: bool = True,
 ) -> dict | list:
     """
-    Call LLM with automatic provider fallback.
+    Call LLM with automatic provider fallback and exponential backoff between attempts.
     Returns parsed JSON (dict or list).
     """
     providers = _build_provider_chain()
 
     last_error = None
-    for provider_name, call_fn in providers:
+    for attempt_idx, (provider_name, call_fn) in enumerate(providers):
         try:
+            # Exponential backoff between provider attempts (0s, 0.5s, 1.5s, 3s)
+            if attempt_idx > 0:
+                backoff = min(0.5 * (2 ** (attempt_idx - 1)), 4.0) + random.random() * 0.2
+                logger.debug(f"Waiting {backoff:.1f}s before trying {provider_name}")
+                await asyncio.sleep(backoff)
+
             raw_text = await call_fn(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
