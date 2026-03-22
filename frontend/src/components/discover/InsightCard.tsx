@@ -1,8 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Insight, Source } from '@/test/__mocks__/discover';
 import { useIdea } from '@/context/IdeaContext';
 
-const TYPE_CONFIG: Record<Insight['type'], { label: string; color: string; bg: string }> = {
+type InsightType = 'pain' | 'want' | 'gap';
+
+interface Insight {
+  id: string;
+  text: string;
+  type: InsightType;
+  sourceIds: string[];
+  intensity: number;
+  monetization: number;
+}
+
+interface Source {
+  id: string;
+  name: string;
+  type: string;
+  count: number;
+}
+
+const TYPE_CONFIG: Record<InsightType, { label: string; color: string; bg: string }> = {
   pain: { label: 'PAIN POINT', color: 'var(--accent-purple)', bg: 'rgba(108,92,231,0.06)' },
   want: { label: 'UNMET WANT', color: 'var(--accent-teal)', bg: 'rgba(45,139,117,0.06)' },
   gap: { label: 'MARKET GAP', color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.06)' },

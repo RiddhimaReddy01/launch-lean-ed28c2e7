@@ -1,5 +1,4 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import type { Insight } from '@/test/__mocks__/discover';
 import SourceBar from './SourceBar';
 import FilterPills from './FilterPills';
 import InsightCard from './InsightCard';

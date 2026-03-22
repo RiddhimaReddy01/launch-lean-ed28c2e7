@@ -1,7 +1,11 @@
-import type { Insight } from '@/test/__mocks__/discover';
-
 interface MentionsPanelProps {
-  insight: Insight;
+  insight: {
+    id: string;
+    text: string;
+    type: 'pain' | 'want' | 'gap';
+    sourceIds: string[];
+    mentions: { source: string; date: string; quote: string }[];
+  };
   onClose: () => void;
 }
 

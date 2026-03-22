@@ -3,8 +3,9 @@
  * Base request function used by all API modules
  */
 
-const API_BASE = 'https://launch-lean-backend.onrender.com';
-const API_TIMEOUT = 30000;
+// API_BASE must be set via environment variable or fallback to localhost for dev
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10);
 
 export class APIError extends Error {
   constructor(
@@ -62,7 +63,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       // Handle auth errors
       if (res.status === 401) {
         localStorage.removeItem('auth_token');
-        window.location.href = '/login';
+        window.location.href = '/auth';
       }
 
       throw new APIError(res.status, detail, `API error ${res.status}`);

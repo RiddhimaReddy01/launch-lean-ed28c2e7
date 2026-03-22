@@ -1,7 +1,5 @@
-import type { Source } from '@/test/__mocks__/discover';
-
 interface SourceBarProps {
-  sources: Source[];
+  sources: Array<{ id: string; name: string; type: string; count: number }>;
   selectedSourceId: string | null;
   onSelectSource: (id: string | null) => void;
 }
