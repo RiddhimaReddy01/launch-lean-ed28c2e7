@@ -41,12 +41,17 @@ async def call_llm(
     temperature: float = 0.3,
     max_tokens: int = 4000,
     json_mode: bool = True,
+    preferred_provider: str | None = None,
 ) -> dict | list:
     """
     Call LLM with automatic provider fallback and exponential backoff between attempts.
     Returns parsed JSON (dict or list).
+
+    Args:
+        preferred_provider: Try this provider first (groq, gemini, openrouter, huggingface)
+                          If None, uses default chain
     """
-    providers = _build_provider_chain()
+    providers = _build_provider_chain(preferred_provider=preferred_provider)
 
     last_error = None
     for attempt_idx, (provider_name, call_fn) in enumerate(providers):
@@ -93,20 +98,35 @@ async def call_llm(
     raise AllProvidersExhaustedError(f"All LLM providers failed. Last error: {last_error}")
 
 
-def _build_provider_chain() -> list[tuple[str, callable]]:
-    """Build ordered list of available providers."""
-    chain = []
+def _build_provider_chain(preferred_provider: str | None = None) -> list[tuple[str, callable]]:
+    """Build ordered list of available providers.
+
+    If preferred_provider specified, it goes first, then fallbacks.
+    """
+    all_providers = []
     if settings.GROQ_API_KEY:
-        chain.append(("groq", _call_groq))
+        all_providers.append(("groq", _call_groq))
     if settings.GEMINI_API_KEY:
-        chain.append(("gemini", _call_gemini))
+        all_providers.append(("gemini", _call_gemini))
     if settings.OPENROUTER_API_KEY:
-        chain.append(("openrouter", _call_openrouter))
+        all_providers.append(("openrouter", _call_openrouter))
     if settings.HF_API_TOKEN:
-        chain.append(("huggingface", _call_hf))
-    if not chain:
+        all_providers.append(("huggingface", _call_hf))
+
+    if not all_providers:
         raise AllProvidersExhaustedError("No LLM API keys configured")
-    return chain
+
+    # Reorder if preferred provider specified
+    if preferred_provider:
+        preferred_provider = preferred_provider.lower()
+        # Find preferred provider and move it to front
+        for i, (name, fn) in enumerate(all_providers):
+            if name.lower() == preferred_provider:
+                all_providers.insert(0, all_providers.pop(i))
+                logger.debug(f"Using preferred provider: {preferred_provider}")
+                break
+
+    return all_providers
 
 
 async def _call_groq(

@@ -78,6 +78,7 @@ async def generate_validation(
             temperature=0.6,  # Higher creativity for copywriting
             max_tokens=4000,
             json_mode=True,
+            preferred_provider="groq",
         )
     except AllProvidersExhaustedError:
         raise HTTPException(status_code=503, detail="All LLM providers unavailable")

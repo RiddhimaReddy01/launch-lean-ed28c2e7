@@ -273,6 +273,7 @@ async def _extract_insights_with_signals(
             temperature=0.4,  # Moderate - balance consistency with insight discovery
             max_tokens=2000,  # Room for 8-12 detailed insights
             json_mode=True,
+            preferred_provider="gemini",
         )
 
         # Parse LLM response

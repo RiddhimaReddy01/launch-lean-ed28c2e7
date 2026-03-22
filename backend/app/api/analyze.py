@@ -85,7 +85,7 @@ async def _handle_opportunity(
     system = analyze_opportunity_system(btype, city, state, metro)
     user_prompt = analyze_section_user("opportunity", insight, decomp, market_context)
 
-    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000)
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000, preferred_provider="openrouter")
 
     # Post-processing: validate TAM > SAM > SOM
     tam_val = _extract_value(raw, "tam")
@@ -112,7 +112,7 @@ async def _handle_customers(
     system = analyze_customers_system(btype, city)
     user_prompt = analyze_section_user("customers", insight, decomp)
 
-    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000)
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000, preferred_provider="openrouter")
 
     # Post-processing
     segments = raw.get("segments", [])

@@ -127,6 +127,7 @@ async def get_or_generate_suppliers(business_type: str, city: str, state: str, t
             temperature=0.3,
             max_tokens=1500,
             json_mode=True,
+            preferred_provider="huggingface",
         )
 
         suppliers = json.loads(response).get("suppliers", []) if isinstance(response, str) else response.get("suppliers", [])
@@ -160,6 +161,7 @@ async def get_or_generate_team(business_type: str, tier: str, root_causes: list[
             temperature=0.3,
             max_tokens=1500,
             json_mode=True,
+            preferred_provider="huggingface",
         )
 
         team = json.loads(response).get("team", []) if isinstance(response, str) else response.get("team", [])
@@ -191,6 +193,7 @@ async def get_or_generate_timeline(business_type: str, tier: str, pain_intensity
             temperature=0.3,
             max_tokens=1500,
             json_mode=True,
+            preferred_provider="huggingface",
         )
 
         timeline = json.loads(response).get("timeline", []) if isinstance(response, str) else response.get("timeline", [])
