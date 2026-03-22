@@ -1,11 +1,45 @@
 import { useState } from 'react';
-import {
-  MOCK_LANDING_PAGE,
-  MOCK_SURVEY,
-  MOCK_SOCIAL_OUTREACH,
-  MOCK_MARKETPLACE,
-  MOCK_DIRECT_OUTREACH,
-} from '@/test/__mocks__/validate';
+
+// Static template content — these are generation templates, not API mock data
+const LANDING_PAGE = {
+  headline: 'Your idea, validated.',
+  subheadline: 'A waitlist page to test real demand before you build.',
+  benefits: [
+    'Capture real interest with a simple signup',
+    'Measure demand before investing',
+    'Build social proof from day one',
+  ],
+  cta: 'Join the waitlist →',
+  socialProof: '"Generated from your research insights"',
+};
+
+const SURVEY_QUESTIONS = [
+  { id: 'q1', question: 'How often do you experience this problem?', type: 'multiple_choice' as const, options: ['Daily', '2–3x per week', 'Weekly', 'Rarely'] },
+  { id: 'q2', question: 'What do you currently use to solve it?', type: 'multiple_choice' as const, options: ['Existing product', 'DIY solution', 'Nothing'] },
+  { id: 'q3', question: 'What frustrates you about current options?', type: 'open' as const },
+  { id: 'q4', question: 'How important is solving this to you? (1–5)', type: 'scale' as const, options: ['1', '2', '3', '4', '5'] },
+  { id: 'q5', question: 'Would you switch to a better solution?', type: 'multiple_choice' as const, options: ['Definitely', 'Probably', 'Maybe', 'No'] },
+  { id: 'q6', question: 'What would you pay for a good solution?', type: 'multiple_choice' as const, options: ['$5–10', '$10–20', '$20–50', '$50+'] },
+  { id: 'q7', question: 'Leave your email for launch updates', type: 'email' as const },
+];
+
+const SOCIAL_OUTREACH = {
+  tone: 'Casual & conversational',
+  message: "Hey everyone! I'm exploring a new idea and would love your honest feedback before I invest any time or money.\n\nWould you find this useful? What's missing from current options?\n\nHere's a quick 2-min survey: [survey link]\n\nThanks!",
+};
+
+const MARKETPLACE_LISTING = {
+  title: 'New Solution — Pre-Launch (Testing Interest)',
+  description: "Testing interest for a new concept in your area. Reply if you'd be interested in trying it or joining a waitlist.",
+  pricing: 'TBD based on feedback',
+  hook: 'Tired of the current options? We might have something better.',
+};
+
+const DIRECT_OUTREACH_DATA = {
+  pitchMessage: "Hi — I'm launching a new concept and looking for early partners. Would your community be interested?",
+  introScript: "My name is [Your Name]. I noticed a gap in the market and I'm testing a new approach. Would love to explore a partnership.",
+  valueProp: "We're focused on quality and transparency, priced competitively. Your members get a better option at no extra cost to you.",
+};
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -31,12 +65,9 @@ function SectionBlock({ title, children, copyText }: { title: string; children: 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        padding: 28,
-        borderRadius: 14,
-        backgroundColor: '#FFFFFF',
+        padding: 28, borderRadius: 14, backgroundColor: '#FFFFFF',
         boxShadow: hovered ? '0 4px 16px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.04)',
-        transition: 'box-shadow 200ms ease-out',
-        marginBottom: 20,
+        transition: 'box-shadow 200ms ease-out', marginBottom: 20,
       }}
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
@@ -54,9 +85,8 @@ function SectionBlock({ title, children, copyText }: { title: string; children: 
 }
 
 function LandingPageAsset() {
-  const lp = MOCK_LANDING_PAGE;
+  const lp = LANDING_PAGE;
   const allText = `${lp.headline}\n${lp.subheadline}\n\n${lp.benefits.join('\n')}\n\n${lp.cta}\n\n${lp.socialProof}`;
-
   return (
     <SectionBlock title="Landing page preview" copyText={allText}>
       <div style={{ borderRadius: 12, border: '1px solid var(--divider-light)', overflow: 'hidden' }}>
@@ -86,12 +116,11 @@ function LandingPageAsset() {
 }
 
 function SurveyAsset() {
-  const allText = MOCK_SURVEY.map((q) => `${q.question}${q.options ? '\n  ' + q.options.join(' / ') : ''}`).join('\n\n');
-
+  const allText = SURVEY_QUESTIONS.map((q) => `${q.question}${q.options ? '\n  ' + q.options.join(' / ') : ''}`).join('\n\n');
   return (
     <SectionBlock title="Customer discovery survey" copyText={allText}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {MOCK_SURVEY.map((q, i) => (
+        {SURVEY_QUESTIONS.map((q, i) => (
           <div key={q.id} style={{ padding: '16px 20px', borderRadius: 10, backgroundColor: 'var(--surface-bg)' }}>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 400, color: 'var(--text-primary)', marginBottom: q.options ? 10 : 0 }}>
               <span style={{ color: 'var(--text-muted)', marginRight: 8 }}>{i + 1}.</span>
@@ -123,7 +152,7 @@ function SurveyAsset() {
 }
 
 function SocialAsset() {
-  const so = MOCK_SOCIAL_OUTREACH;
+  const so = SOCIAL_OUTREACH;
   return (
     <SectionBlock title="Social outreach message" copyText={so.message}>
       <div style={{ padding: 20, borderRadius: 14, backgroundColor: 'var(--surface-bg)', position: 'relative' }}>
@@ -144,7 +173,7 @@ function SocialAsset() {
 }
 
 function MarketplaceAsset() {
-  const ml = MOCK_MARKETPLACE;
+  const ml = MARKETPLACE_LISTING;
   const allText = `${ml.title}\n\n${ml.hook}\n\n${ml.description}\n\nPrice: ${ml.pricing}`;
   return (
     <SectionBlock title="Marketplace listing" copyText={allText}>
@@ -164,7 +193,7 @@ function MarketplaceAsset() {
 }
 
 function DirectOutreachAsset() {
-  const d = MOCK_DIRECT_OUTREACH;
+  const d = DIRECT_OUTREACH_DATA;
   const allText = `Pitch:\n${d.pitchMessage}\n\nIntro Script:\n${d.introScript}\n\nValue Proposition:\n${d.valueProp}`;
   return (
     <SectionBlock title="Direct outreach kit" copyText={allText}>
@@ -190,14 +219,6 @@ const METHOD_COMPONENTS: Record<string, React.ComponentType> = {
   social: SocialAsset,
   marketplace: MarketplaceAsset,
   direct: DirectOutreachAsset,
-};
-
-const METHOD_LABELS: Record<string, string> = {
-  landing: 'Landing page',
-  survey: 'Survey',
-  social: 'Social outreach',
-  marketplace: 'Marketplace listing',
-  direct: 'Direct outreach',
 };
 
 interface Props {

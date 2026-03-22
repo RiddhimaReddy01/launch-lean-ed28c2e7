@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Insight, Source } from '@/test/__mocks__/discover';
+import type { Insight, Source } from '@/types/research-ui';
 import { useIdea } from '@/context/IdeaContext';
 
 const TYPE_CONFIG: Record<Insight['type'], { label: string; color: string; bg: string }> = {
@@ -50,9 +50,7 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
       }}
       onClick={() => setExpanded(!expanded)}
     >
-      {/* Collapsed header — always visible */}
       <div className="flex items-start gap-4 p-5">
-        {/* Score badge */}
         <div
           className="flex-shrink-0 flex items-center justify-center rounded-[8px]"
           style={{
@@ -69,7 +67,6 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Type label */}
           <span
             style={{
               fontFamily: "'Inter', sans-serif",
@@ -82,7 +79,6 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
             {config.label}
           </span>
 
-          {/* Title */}
           <p
             style={{
               fontFamily: "'Inter', sans-serif",
@@ -96,17 +92,12 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
             {insight.title}
           </p>
 
-          {/* Meta */}
-          <p
-            className="font-caption"
-            style={{ marginTop: 6, fontSize: 12 }}
-          >
+          <p className="font-caption" style={{ marginTop: 6, fontSize: 12 }}>
             {insight.mentionCount} mentions · {intensityLabel(insight.intensity)} · {monetizationLabel(insight.monetization)}
           </p>
         </div>
       </div>
 
-      {/* Expanded content */}
       <div
         style={{
           height: expanded ? contentHeight : 0,
@@ -115,10 +106,8 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
         }}
       >
         <div ref={contentRef} className="px-5 pb-5">
-          {/* Divider */}
           <div style={{ height: 1, backgroundColor: 'var(--divider)', marginBottom: 20 }} />
 
-          {/* Evidence quotes */}
           <div className="flex flex-col gap-4">
             {insight.evidence.map((ev, i) => (
               <div
@@ -166,7 +155,6 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
             ))}
           </div>
 
-          {/* Score breakdown */}
           <div className="mt-5 flex gap-6">
             {[
               { label: 'Frequency', value: insight.frequency },
@@ -193,12 +181,12 @@ export default function InsightCard({ insight, sources, onSeeMentions }: Insight
             ))}
           </div>
 
-          {/* Audience estimate */}
-          <p className="font-caption mt-4" style={{ fontSize: 12 }}>
-            Audience: {insight.audienceEstimate}
-          </p>
+          {insight.audienceEstimate && (
+            <p className="font-caption mt-4" style={{ fontSize: 12 }}>
+              Audience: {insight.audienceEstimate}
+            </p>
+          )}
 
-          {/* Actions */}
           <div className="flex items-center gap-3 mt-5 flex-wrap">
             <button
               onClick={(e) => {

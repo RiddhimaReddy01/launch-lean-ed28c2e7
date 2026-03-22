@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useIdea } from '@/context/IdeaContext';
-import { MOCK_METRICS, MOCK_METHODS } from '@/test/__mocks__/validate';
+import type { MetricTarget } from '@/types/research-ui';
+import { VALIDATION_METHODS, createDefaultValidationMetrics } from '@/lib/research-ui-config';
 import { useValidationPlan } from '@/hooks/use-research';
 import { mapValidateCommunities } from '@/lib/transform';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +12,7 @@ type Verdict = 'awaiting' | 'go' | 'pivot' | 'kill';
 export default function ValidateModule() {
   const { idea, selectedInsight } = useIdea();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [metrics, setMetrics] = useState(MOCK_METRICS.map((m) => ({ ...m })));
+  const [metrics, setMetrics] = useState<MetricTarget[]>(createDefaultValidationMetrics());
   const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set());
   const [sharedChannels, setSharedChannels] = useState<Set<string>>(new Set());
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
@@ -80,7 +81,6 @@ export default function ValidateModule() {
     return { verdict: 'pivot' as Verdict, reasoning: 'Mixed signals. Some interest exists but key metrics need improvement.' };
   }, [metrics]);
 
-  // Derived signals
   const signupsVal = metrics.find((m) => m.id === 'signups')?.actual || 0;
   const switchVal = metrics.find((m) => m.id === 'switch')?.actual || 0;
   const priceVal = metrics.find((m) => m.id === 'price')?.actual || 0;
@@ -96,7 +96,7 @@ export default function ValidateModule() {
   };
   const vc = verdictConfig[verdict];
 
-  const insightTitle = selectedInsight?.title || 'Existing juice bars are overpriced for basic smoothies';
+  const insightTitle = selectedInsight?.title || 'Select an insight to validate';
 
   return (
     <div ref={containerRef} className="scroll-reveal" style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
@@ -153,7 +153,7 @@ export default function ValidateModule() {
         </p>
       </div>
 
-      {/* VERDICT CARD (hero position) */}
+      {/* VERDICT CARD */}
       <div
         className="rounded-[16px] mb-16 text-center"
         style={{ padding: 40, backgroundColor: vc.bg }}
@@ -243,7 +243,7 @@ export default function ValidateModule() {
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>VALIDATION METHODS</p>
         <div className="flex flex-col gap-2">
-          {MOCK_METHODS.map((method) => {
+          {VALIDATION_METHODS.map((method) => {
             const isSelected = selectedMethods.has(method.id);
             const isHov = hoveredMethod === method.id;
             return (
@@ -295,7 +295,7 @@ export default function ValidateModule() {
       <div className="mb-16">
         <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>WHERE TO SHARE</p>
         {communities.length === 0 ? (
-          <EmptyState message={validationQuery.isFetching ? 'Loading communities�' : 'No communities returned yet.'} />
+          <EmptyState message={validationQuery.isFetching ? 'Loading communities…' : 'No communities returned yet.'} />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
             {communities.map((c) => {
@@ -409,5 +409,3 @@ export default function ValidateModule() {
     </div>
   );
 }
-
-

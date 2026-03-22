@@ -1,17 +1,30 @@
 import type { DiscoverResponse, DiscoverInsight, DiscoverSource, AnalyzeResponse, SetupResponse, ValidateResponse } from '@/types/api';
-import type { Insight, Source } from '@/test/__mocks__/discover';
 import type {
-  MarketSize, DemandBehaviorData, CustomerSegment,
-  Competitor, MarketStructureData, RootCause, StrategicSnapshotData, StartupCosts,
-} from '@/test/__mocks__/analyze';
-import type { LaunchTier, CostCategory, Supplier as UiSupplier, TeamRole as UiTeamRole, TimelinePhase as UiTimelinePhase } from '@/test/__mocks__/setup';
+  CommunityChannel,
+  Competitor,
+  CustomerSegment,
+  DemandBehaviorData,
+  Insight,
+  LaunchTier,
+  MarketSize,
+  MarketStructureData,
+  RootCause,
+  SetupCostCategory,
+  Source,
+  StartupCosts,
+  StrategicSnapshotData,
+  Supplier as UiSupplier,
+  TeamRole as UiTeamRole,
+  TimelinePhase as UiTimelinePhase,
+} from '@/types/research-ui';
 
 const slug = (val: string) => val.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 function mapType(t: string): Insight['type'] {
   const normalized = t.replace(/\s+/g, '_').toLowerCase();
-  if (normalized.includes('gap')) return 'gap';
-  if (normalized.includes('want')) return 'want';
+  if (normalized.includes('market_gap') || normalized.includes('gap')) return 'gap';
+  if (normalized.includes('unmet_want') || normalized.includes('want')) return 'want';
+  if (normalized.includes('pain_point') || normalized.includes('pain')) return 'pain';
   if (normalized.includes('trend')) return 'want';
   return 'pain';
 }
@@ -30,18 +43,29 @@ export function mapDiscoverSources(sources: DiscoverSource[]): Source[] {
 export function mapDiscoverInsights(insights: DiscoverInsight[], sources: Source[]): Insight[] {
   return insights.map((ins) => {
     const sourceIds = sources.map((s) => s.id);
+
+    // Backend sends scores on 0-10 scale already; just round for display
+    const rawScore = ins.score || 0;
+    const score = Math.round(Math.min(10, Math.max(0, rawScore)));
+
+    const freq = ins.frequency_score || 0;
+    const intensity = ins.intensity_score || 0;
+    const monetization = ins.willingness_to_pay_score || 0;
+
     return {
       id: ins.id,
       type: mapType(ins.type),
       title: ins.title,
-      score: Math.round((ins.score || 0) * 10),
-      frequency: Math.round(ins.frequency_score || 0),
-      intensity: Math.round(ins.intensity_score || 0),
-      monetization: Math.round(ins.willingness_to_pay_score || 0),
+      score,
+      frequency: Math.round(Math.min(10, Math.max(0, freq))),
+      intensity: Math.round(Math.min(10, Math.max(0, intensity))),
+      monetization: Math.round(Math.min(10, Math.max(0, monetization))),
       mentionCount: ins.mention_count || 0,
       sourceIds,
       sourcePlatforms: ins.source_platforms || [],
-      audienceEstimate: ins.audience_estimate || '',
+      audienceEstimate: ins.audience_estimate && ins.audience_estimate !== 'unknown'
+        ? ins.audience_estimate
+        : '',
       evidence: (ins.evidence || []).map((ev, idx) => ({
         quote: ev.quote,
         sourceId: sourceIds[idx] || sourceIds[0] || 'source',
@@ -60,15 +84,38 @@ export function summarizeDiscover(insights: Insight[], sources: Source[]) {
   return { totalSources: sources.length, totalSignals };
 }
 
-// â€”â€” Analyze mappings â€”â€” //
 export function mapOpportunity(raw: AnalyzeResponse | undefined): MarketSize[] | undefined {
   if (!raw?.data) return undefined;
-  const { tam, sam, som } = raw.data;
-  const pick = (obj: any) => ({
-    value: obj?.formatted || obj?.value?.toLocaleString?.() || 'N/A',
-    rawValue: obj?.value || 0,
-    methodology: obj?.methodology || '',
-  });
+  const d = raw.data;
+
+  // The LLM may return tam/sam/som as top-level keys or nested under various names
+  const findMarketField = (key: string) => {
+    // Direct key
+    if (d[key] && typeof d[key] === 'object') return d[key];
+    // Uppercase
+    if (d[key.toUpperCase()] && typeof d[key.toUpperCase()] === 'object') return d[key.toUpperCase()];
+    return null;
+  };
+
+  const tam = findMarketField('tam');
+  const sam = findMarketField('sam');
+  const som = findMarketField('som');
+
+  // If none of the three exist, the LLM returned a different shape
+  if (!tam && !sam && !som) return undefined;
+
+  const pick = (obj: any) => {
+    if (!obj) return { value: 'N/A', rawValue: 0, methodology: '' };
+    const rawVal = obj.value || obj.dollar_figure || obj.amount || 0;
+    const numVal = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/[^0-9.]/g, '')) || 0;
+    const formatted = obj.formatted || (numVal > 0 ? `$${numVal.toLocaleString()}` : 'N/A');
+    return {
+      value: formatted,
+      rawValue: numVal,
+      methodology: obj.methodology || obj.explanation || '',
+    };
+  };
+
   return [
     { acronym: 'TAM', label: 'Total Addressable Market', ...pick(tam) },
     { acronym: 'SAM', label: 'Serviceable Addressable Market', ...pick(sam) },
@@ -111,7 +158,7 @@ export function mapSegments(raw: AnalyzeResponse | undefined): CustomerSegment[]
     description: s.description,
     estimatedSize: s.estimated_size?.toString?.() || s.estimated_size || '',
     painIntensity: s.pain_intensity || 0,
-    caresMostAbout: s.cares_most_about || s.primary_need ? [s.primary_need] : [],
+    caresMostAbout: s.cares_most_about || (s.primary_need ? [s.primary_need] : []),
   }));
 }
 
@@ -179,11 +226,10 @@ export function mapCostsPreview(raw: AnalyzeResponse | undefined): StartupCosts 
   };
 }
 
-// â€”â€” Setup mappings â€”â€” //
-export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTier[]; costs: Record<string, CostCategory[]> } | undefined {
+export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTier[]; costs: Record<string, SetupCostCategory[]> } | undefined {
   if (!raw) return undefined;
   const tiers: LaunchTier[] = raw.cost_tiers.map((t, idx) => ({
-    id: (['minimum', 'recommended', 'full'] as LaunchTier['id'][])[idx] || 'recommended',
+    id: (['minimum', 'recommended', 'full'] as const)[idx] || 'recommended',
     title: t.tier?.replace(/_/g, ' ') || 'Tier',
     model: t.model || '',
     costRange: t.total_range ? `$${Math.round(t.total_range.min).toLocaleString()} – $${Math.round(t.total_range.max).toLocaleString()}` : '',
@@ -191,7 +237,7 @@ export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTi
     costMax: t.total_range?.max || 0,
     whenToChoose: t.notes || 'Use when the economics fit your risk tolerance.',
   }));
-  const costs: Record<string, CostCategory[]> = {};
+  const costs: Record<string, SetupCostCategory[]> = {};
   raw.cost_tiers.forEach((t, idx) => {
     const key = (['minimum', 'recommended', 'full'] as const)[idx] || 'recommended';
     costs[key] = (t.line_items || []).map((li: any) => ({
@@ -257,8 +303,7 @@ export function mapSetupTimeline(raw: SetupResponse | undefined): UiTimelinePhas
   }));
 }
 
-// â€”â€” Validate mappings â€”â€” //
-export function mapValidateCommunities(raw: ValidateResponse | undefined) {
+export function mapValidateCommunities(raw: ValidateResponse | undefined): CommunityChannel[] | undefined {
   return raw?.communities?.map((c) => ({
     id: c.name.toLowerCase().replace(/\s+/g, '-'),
     name: c.name,
@@ -266,6 +311,6 @@ export function mapValidateCommunities(raw: ValidateResponse | undefined) {
     members: c.member_count || '',
     rationale: c.rationale,
     url: c.link,
-    platformColor: '#6c5ce7',
+    platformColor: 'var(--accent-purple)',
   }));
 }

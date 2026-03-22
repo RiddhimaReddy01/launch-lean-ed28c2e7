@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { MOCK_TEAM } from '@/test/__mocks__/setup';
-import type { TeamRole } from '@/test/__mocks__/setup';
+import type { TeamRole } from '@/types/research-ui';
 
 export default function TeamBuilder({
   includedRoles,
   onToggleRole,
-  team = MOCK_TEAM,
+  team = [],
 }: {
   includedRoles: Set<string>;
   onToggleRole: (id: string) => void;

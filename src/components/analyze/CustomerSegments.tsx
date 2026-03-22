@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { MOCK_SEGMENTS, type CustomerSegment } from '@/test/__mocks__/analyze';
+import type { CustomerSegment } from '@/types/research-ui';
 
-export default function CustomerSegments({ segments = MOCK_SEGMENTS }: { segments?: CustomerSegment[] }) {
+export default function CustomerSegments({ segments = [] }: { segments?: CustomerSegment[] }) {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const [hoveredBar, setHoveredBar] = useState<{ segment: string; index: number } | null>(null);
 

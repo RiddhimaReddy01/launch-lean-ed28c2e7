@@ -1,4 +1,4 @@
-import { FILTER_CATEGORIES } from '@/test/__mocks__/discover';
+import { FILTER_CATEGORIES } from '@/lib/research-ui-config';
 
 interface FilterPillsProps {
   selected: string;

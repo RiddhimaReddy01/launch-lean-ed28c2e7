@@ -1,4 +1,4 @@
-import type { Insight } from '@/test/__mocks__/discover';
+import type { Insight } from '@/types/research-ui';
 
 interface MentionsPanelProps {
   insight: Insight;
@@ -11,13 +11,11 @@ export default function MentionsPanel({ insight, onClose }: MentionsPanelProps) 
       className="fixed inset-0 z-50 flex justify-end"
       onClick={onClose}
     >
-      {/* Overlay */}
       <div
         className="absolute inset-0"
         style={{ backgroundColor: 'rgba(0,0,0,0.15)', transition: 'opacity 200ms ease-out' }}
       />
 
-      {/* Panel */}
       <div
         className="relative w-full max-w-md h-full overflow-y-auto"
         style={{
@@ -28,7 +26,6 @@ export default function MentionsPanel({ insight, onClose }: MentionsPanelProps) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
-          {/* Close button */}
           <button
             onClick={onClose}
             className="mb-6 transition-colors duration-200 active:scale-[0.96]"
@@ -42,11 +39,7 @@ export default function MentionsPanel({ insight, onClose }: MentionsPanelProps) 
             ← Back
           </button>
 
-          {/* Title */}
-          <p
-            className="font-heading"
-            style={{ fontSize: 26, maxWidth: 360 }}
-          >
+          <p className="font-heading" style={{ fontSize: 26, maxWidth: 360 }}>
             {insight.title}
           </p>
 
@@ -54,7 +47,6 @@ export default function MentionsPanel({ insight, onClose }: MentionsPanelProps) 
             {insight.mentionCount} mentions across {insight.sourcePlatforms.join(', ')}
           </p>
 
-          {/* All evidence */}
           <div className="flex flex-col gap-4 mt-8">
             {insight.evidence.map((ev, i) => (
               <div
@@ -101,7 +93,6 @@ export default function MentionsPanel({ insight, onClose }: MentionsPanelProps) 
             ))}
           </div>
 
-          {/* Placeholder for more mentions */}
           <div
             className="mt-6 rounded-[10px] p-4 text-center"
             style={{ backgroundColor: 'var(--surface-input)' }}

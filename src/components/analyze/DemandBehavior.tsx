@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_DEMAND_BEHAVIOR, type DemandBehaviorData } from '@/test/__mocks__/analyze';
+import type { DemandBehaviorData } from '@/types/research-ui';
 
 function BarIndicator({ value, max = 10, label, description }: { value: number; max?: number; label: string; description?: string }) {
   const [hovered, setHovered] = useState(false);
@@ -113,7 +113,7 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function DemandBehavior({ data = MOCK_DEMAND_BEHAVIOR }: { data?: DemandBehaviorData }) {
+export default function DemandBehavior({ data }: { data: DemandBehaviorData }) {
   const { demand, usage, pricing, friction } = data;
 
   return (
