@@ -43,9 +43,16 @@ async def get_current_user(
     try:
         # Decode Supabase JWT
         # Supabase signs JWTs with the project's JWT secret
+        # Get JWT secret from environment - in Supabase, extract from dashboard
+        jwt_secret = settings.SUPABASE_JWT_SECRET or settings.SUPABASE_SERVICE_KEY
+        if not jwt_secret:
+            raise HTTPException(
+                status_code=500,
+                detail="JWT secret not configured"
+            )
         payload = jwt.decode(
             token,
-            settings.SUPABASE_ANON_KEY,
+            jwt_secret,
             algorithms=["HS256"],
             options={"verify_exp": True},
         )

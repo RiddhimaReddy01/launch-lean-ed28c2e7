@@ -36,7 +36,7 @@ class DecomposeResponse(BaseModel):
 
 
 class DiscoverRequest(BaseModel):
-    decomposition: dict
+    decomposition: DecomposeResponse  # Strongly typed to prevent malformed requests
 
 
 class Evidence(BaseModel):
@@ -77,8 +77,8 @@ class DiscoverResponse(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     section: str  # opportunity | customers | competitors | rootcause | costs
-    insight: dict
-    decomposition: dict
+    insight: Insight  # Strongly typed insight data
+    decomposition: DecomposeResponse  # Strongly typed decomposition
     prior_context: Optional[dict] = None
 
 
@@ -159,8 +159,8 @@ class AnalyzeResponse(BaseModel):
 
 
 class SetupRequest(BaseModel):
-    insight: dict
-    decomposition: dict
+    insight: Insight  # Strongly typed insight data
+    decomposition: DecomposeResponse  # Strongly typed decomposition
     analysis_context: Optional[dict] = None
 
 
@@ -214,8 +214,8 @@ class SetupResponse(BaseModel):
 
 class ValidateRequest(BaseModel):
     channels: list[str] = Field(default_factory=lambda: ["landing_page", "survey"])
-    insight: dict
-    decomposition: dict
+    insight: Insight  # Strongly typed insight data
+    decomposition: DecomposeResponse  # Strongly typed decomposition
     analysis_context: Optional[dict] = None
     setup_context: Optional[dict] = None
 
