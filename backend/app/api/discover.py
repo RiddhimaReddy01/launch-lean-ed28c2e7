@@ -210,19 +210,21 @@ def _fallback_insights(posts: list[dict]) -> dict:
         if term in full:
             keywords.append(term)
     insights = []
+    type_cycle = ["pain_point", "unmet_want", "market_gap", "pain_point", "unmet_want"]
     for i, term in enumerate(keywords[:5]):
         insights.append({
             "id": f"fallback_{i+1}",
-            "type": "trend",
+            "type": type_cycle[i],
             "title": f"Frequent mention of {term}",
             "score": 5,
+            "pain_score": 5,
             "frequency_score": 5,
             "intensity_score": 4,
             "willingness_to_pay_score": 3,
-            "mention_count": 0,
+            "mention_count": 5,
             "evidence": [],
             "source_platforms": ["reddit", "search"],
-            "audience_estimate": "unknown",
+            "audience_estimate": "",
         })
     return {"insights": insights}
 
