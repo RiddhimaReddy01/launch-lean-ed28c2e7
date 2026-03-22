@@ -43,18 +43,29 @@ export function mapDiscoverSources(sources: DiscoverSource[]): Source[] {
 export function mapDiscoverInsights(insights: DiscoverInsight[], sources: Source[]): Insight[] {
   return insights.map((ins) => {
     const sourceIds = sources.map((s) => s.id);
+
+    // Backend sends scores on 0-10 scale already; just round for display
+    const rawScore = ins.score || 0;
+    const score = Math.round(Math.min(10, Math.max(0, rawScore)));
+
+    const freq = ins.frequency_score || 0;
+    const intensity = ins.intensity_score || 0;
+    const monetization = ins.willingness_to_pay_score || 0;
+
     return {
       id: ins.id,
       type: mapType(ins.type),
       title: ins.title,
-      score: Math.round((ins.score || 0) * 10),
-      frequency: Math.round(ins.frequency_score || 0),
-      intensity: Math.round(ins.intensity_score || 0),
-      monetization: Math.round(ins.willingness_to_pay_score || 0),
+      score,
+      frequency: Math.round(Math.min(10, Math.max(0, freq))),
+      intensity: Math.round(Math.min(10, Math.max(0, intensity))),
+      monetization: Math.round(Math.min(10, Math.max(0, monetization))),
       mentionCount: ins.mention_count || 0,
       sourceIds,
       sourcePlatforms: ins.source_platforms || [],
-      audienceEstimate: ins.audience_estimate || '',
+      audienceEstimate: ins.audience_estimate && ins.audience_estimate !== 'unknown'
+        ? ins.audience_estimate
+        : '',
       evidence: (ins.evidence || []).map((ev, idx) => ({
         quote: ev.quote,
         sourceId: sourceIds[idx] || sourceIds[0] || 'source',
