@@ -280,5 +280,9 @@ export async function exportIdea(ideaId: string): Promise<Blob> {
     throw new Error('PDF export failed');
   }
 
-  return res.blob();
+  try {
+    return await res.blob();
+  } catch (error) {
+    throw new Error(`Failed to process PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }

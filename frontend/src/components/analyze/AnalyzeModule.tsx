@@ -92,8 +92,8 @@ export default function AnalyzeModule() {
   }, []);
 
   const showSkeleton = !ready.has(activeTab);
-  const insightTitle = selectedInsight?.title || 'Select an insight to analyze';
-  const insightScore = Math.round((selectedInsight as any)?.score || 0);
+  const insightTitle = selectedInsight?.title ?? 'Select an insight to analyze';
+  const insightScore = Math.round(selectedInsight?.score ?? 0);
 
   const view = useMemo(
     () => ({

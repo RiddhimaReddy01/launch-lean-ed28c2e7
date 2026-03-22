@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listIdeas } from '@/api';
@@ -310,6 +310,3 @@ function IdeaCard({
     </div>
   );
 }
-
-// Import React for useState
-import React from 'react';

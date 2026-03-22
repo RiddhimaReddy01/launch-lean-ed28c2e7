@@ -3,7 +3,7 @@ POST /api/setup - Generate launch plan (Cost Tiers, Suppliers, Team, Timeline)
 """
 
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.core.auth import optional_user
 from app.schemas.models import SetupRequest, SetupResponse
 from app.services.setup_service import generate_full_setup
@@ -55,11 +55,8 @@ async def setup_section(
         return response
 
     except Exception as e:
-        logger.error(f"[SETUP] Failed: {e}")
-        # Return empty response rather than error
-        return SetupResponse(
-            cost_tiers=[],
-            suppliers=[],
-            team=[],
-            timeline=[]
+        logger.error(f"[SETUP] Failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate setup plan: {str(e)}"
         )

@@ -53,8 +53,8 @@ export default function ValidateModule() {
 
   // Convert selected methods to backend channels
   const channels = Array.from(selectedMethods)
-    .map((method) => METHOD_TO_CHANNEL[method])
-    .filter(Boolean);
+    .map((method) => METHOD_TO_CHANNEL[method] ?? null)
+    .filter((channel): channel is string => channel !== null);
 
   const validationQuery = useValidationPlan(undefined, undefined, channels.length > 0 ? channels : undefined);
 

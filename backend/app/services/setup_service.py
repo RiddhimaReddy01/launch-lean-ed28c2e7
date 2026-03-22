@@ -5,8 +5,7 @@ Handles LLM calls, caching, and deterministic calculations.
 
 import json
 import logging
-from app.core.llm import call_llm
-from app.core.db import get_db
+from app.services.llm_client import call_llm
 from app.prompts.templates import (
     setup_suppliers_system, setup_suppliers_user,
     setup_team_system, setup_team_user,
@@ -47,51 +46,13 @@ TIER_MULTIPLIERS = {
 # ═══ CACHE OPERATIONS ═══
 
 async def get_cached_setup(business_type: str, city: str, state: str, tier: str, component: str = None):
-    """Get cached SETUP data. If component specified, get just that component."""
-    db = get_db()
-
-    if component:
-        # Specific component cache
-        cache_key = f"setup:{component}:{business_type}|{city}|{state}|{tier}"
-    else:
-        # Full setup cache
-        cache_key = f"setup:full:{business_type}|{city}|{state}|{tier}"
-
-    try:
-        result = db.execute("""
-            SELECT data FROM setup_cache
-            WHERE cache_key = %s AND expires_at > NOW()
-            LIMIT 1
-        """, [cache_key]).fetchone()
-
-        if result:
-            logger.info(f"[SETUP] Cache hit: {cache_key}")
-            # Increment hit count
-            db.execute("UPDATE setup_cache SET hit_count = hit_count + 1 WHERE cache_key = %s", [cache_key])
-            return json.loads(result[0])
-
-        return None
-    except Exception as e:
-        logger.warning(f"[SETUP] Cache lookup failed: {e}")
-        return None
+    """Get cached SETUP data. Cache currently disabled."""
+    return None
 
 
 async def cache_setup_data(business_type: str, city: str, state: str, tier: str, component: str, data: dict, ttl_days: int = 30):
-    """Store SETUP component in cache."""
-    db = get_db()
-    cache_key = f"setup:{component}:{business_type}|{city}|{state}|{tier}"
-
-    try:
-        db.execute("""
-            INSERT INTO setup_cache (cache_key, data, expires_at)
-            VALUES (%s, %s, NOW() + INTERVAL %s)
-            ON CONFLICT (cache_key)
-            DO UPDATE SET data = EXCLUDED.data, expires_at = NOW() + INTERVAL %s
-        """, [cache_key, json.dumps(data), f"{ttl_days} days", f"{ttl_days} days"])
-
-        logger.info(f"[SETUP] Cached {component}: {cache_key}")
-    except Exception as e:
-        logger.warning(f"[SETUP] Cache store failed: {e}")
+    """Store SETUP component in cache. Cache currently disabled."""
+    logger.debug(f"[SETUP] Cache storage skipped for {component}")
 
 
 # ═══ COST TIERS (Deterministic - No LLM) ═══
@@ -183,25 +144,7 @@ async def get_or_generate_suppliers(business_type: str, city: str, state: str, t
 # ═══ TEAM (LLM + Cache) ═══
 
 async def get_or_generate_team(business_type: str, tier: str, root_causes: list[dict], costs: dict) -> list[dict]:
-    """Get cached team plan or generate via LLM."""
-
-    # Note: Team cache key doesn't include city/state, just business_type + tier (hiring is similar across regions)
-    db = get_db()
-    cache_key = f"setup:team:{business_type}|{tier}"
-
-    try:
-        result = db.execute("""
-            SELECT data FROM setup_cache
-            WHERE cache_key = %s AND expires_at > NOW()
-            LIMIT 1
-        """, [cache_key]).fetchone()
-
-        if result:
-            logger.info(f"[SETUP] Cache hit: {cache_key}")
-            db.execute("UPDATE setup_cache SET hit_count = hit_count + 1 WHERE cache_key = %s", [cache_key])
-            return json.loads(result[0])
-    except Exception as e:
-        logger.warning(f"[SETUP] Cache lookup failed: {e}")
+    """Get team plan via LLM."""
 
     logger.info(f"[SETUP] Generating team plan for {business_type} ({tier} tier)")
 
@@ -220,18 +163,6 @@ async def get_or_generate_team(business_type: str, tier: str, root_causes: list[
         )
 
         team = json.loads(response).get("team", []) if isinstance(response, str) else response.get("team", [])
-
-        # Cache
-        try:
-            db.execute("""
-                INSERT INTO setup_cache (cache_key, data, expires_at)
-                VALUES (%s, %s, NOW() + INTERVAL '30 days')
-                ON CONFLICT (cache_key)
-                DO UPDATE SET data = EXCLUDED.data, expires_at = NOW() + INTERVAL '30 days'
-            """, [cache_key, json.dumps(team)])
-        except Exception as e:
-            logger.warning(f"[SETUP] Cache store failed: {e}")
-
         return team
 
     except Exception as e:
@@ -242,28 +173,10 @@ async def get_or_generate_team(business_type: str, tier: str, root_causes: list[
 # ═══ TIMELINE (LLM + Cache) ═══
 
 async def get_or_generate_timeline(business_type: str, tier: str, pain_intensity: float, root_causes: list[dict], costs: dict) -> list[dict]:
-    """Get cached timeline or generate via LLM."""
+    """Generate timeline via LLM."""
 
-    db = get_db()
-
-    # Cache key includes pain level to distinguish timelines
+    # Classify pain level
     pain_level = "high" if pain_intensity >= 7 else ("medium" if pain_intensity >= 4 else "low")
-    cache_key = f"setup:timeline:{business_type}|{tier}|{pain_level}"
-
-    try:
-        result = db.execute("""
-            SELECT data FROM setup_cache
-            WHERE cache_key = %s AND expires_at > NOW()
-            LIMIT 1
-        """, [cache_key]).fetchone()
-
-        if result:
-            logger.info(f"[SETUP] Cache hit: {cache_key}")
-            db.execute("UPDATE setup_cache SET hit_count = hit_count + 1 WHERE cache_key = %s", [cache_key])
-            return json.loads(result[0])
-    except Exception as e:
-        logger.warning(f"[SETUP] Cache lookup failed: {e}")
-
     logger.info(f"[SETUP] Generating timeline for {business_type} ({tier} tier, pain={pain_level})")
 
     try:
@@ -281,18 +194,6 @@ async def get_or_generate_timeline(business_type: str, tier: str, pain_intensity
         )
 
         timeline = json.loads(response).get("timeline", []) if isinstance(response, str) else response.get("timeline", [])
-
-        # Cache
-        try:
-            db.execute("""
-                INSERT INTO setup_cache (cache_key, data, expires_at)
-                VALUES (%s, %s, NOW() + INTERVAL '30 days')
-                ON CONFLICT (cache_key)
-                DO UPDATE SET data = EXCLUDED.data, expires_at = NOW() + INTERVAL '30 days'
-            """, [cache_key, json.dumps(timeline)])
-        except Exception as e:
-            logger.warning(f"[SETUP] Cache store failed: {e}")
-
         return timeline
 
     except Exception as e:

@@ -3,7 +3,7 @@ Pydantic models for all API request/response schemas.
 Used for validation, serialization, and documentation.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 
@@ -207,6 +207,14 @@ class TimelinePhase(BaseModel):
     phase: str = ""
     weeks: str = ""
     milestones: list[str] = Field(default_factory=list)
+
+    @field_validator("weeks", mode="before")
+    @classmethod
+    def convert_weeks_to_string(cls, v):
+        """Convert weeks to string if it's an int."""
+        if isinstance(v, int):
+            return str(v)
+        return v
 
 
 class SetupResponse(BaseModel):

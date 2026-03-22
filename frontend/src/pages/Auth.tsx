@@ -17,6 +17,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const logger = { error: console.error };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -75,8 +77,6 @@ export default function Auth() {
       setIsLoading(false);
     }
   };
-
-  const logger = { error: console.error };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');

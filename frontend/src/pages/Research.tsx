@@ -69,7 +69,6 @@ export default function Research() {
   const { allResults, isLoading, error } = useResearchParallel(idea);
 
   const currentIndex = STEPS.findIndex((s) => s.key === currentStep);
-  const activeStep = STEPS[currentIndex];
 
   useEffect(() => {
     if (!idea) navigate('/', { replace: true });

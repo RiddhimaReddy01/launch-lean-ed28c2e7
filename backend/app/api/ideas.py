@@ -39,7 +39,7 @@ class SaveIdeaRequest(BaseModel):
 
 class UpdateIdeaRequest(BaseModel):
     """Request to update an idea."""
-    title: Optional[str] = None
+    title: Optional[str] = Field(None, min_length=3, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = None
     decomposition: Optional[dict] = None

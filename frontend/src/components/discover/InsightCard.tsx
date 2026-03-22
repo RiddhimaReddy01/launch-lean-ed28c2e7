@@ -5,18 +5,24 @@ type InsightType = 'pain' | 'want' | 'gap';
 
 interface Insight {
   id: string;
-  text: string;
   type: InsightType;
-  sourceIds: string[];
+  title: string;
+  score: number;
+  frequency: number;
   intensity: number;
   monetization: number;
-}
-
-interface Source {
-  id: string;
-  name: string;
-  type: string;
-  count: number;
+  mentionCount: number;
+  sourceIds: string[];
+  sourcePlatforms: string[];
+  audienceEstimate: string;
+  evidence: Array<{
+    quote: string;
+    sourceId: string;
+    sourceName: string;
+    upvotes: number | null;
+    date: string;
+    url?: string;
+  }>;
 }
 
 const TYPE_CONFIG: Record<InsightType, { label: string; color: string; bg: string }> = {
@@ -39,11 +45,10 @@ function monetizationLabel(val: number): string {
 
 interface InsightCardProps {
   insight: Insight;
-  sources: Source[];
   onSeeMentions: (insight: Insight) => void;
 }
 
-export default function InsightCard({ insight, sources, onSeeMentions }: InsightCardProps) {
+export default function InsightCard({ insight, onSeeMentions }: InsightCardProps) {
   const [expanded, setExpanded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState(0);

@@ -9,7 +9,7 @@ import json
 from fastapi import APIRouter, Depends
 
 from app.core.auth import optional_user
-from app.core.llm import call_llm
+from app.services.llm_client import call_llm
 from app.schemas.models import (
     DiscoverRequest, DiscoverResponse, Insight, Evidence, SourceSummary,
 )

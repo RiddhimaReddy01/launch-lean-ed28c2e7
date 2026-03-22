@@ -4,7 +4,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getIdea, updateIdea, deleteIdea, getValidationExperiments, createValidationExperiment, exportIdea } from '@/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import type { IdeaDetailResponse } from '@/types/api';
 
 type TabType = 'overview' | 'discover' | 'analyze' | 'setup' | 'validate' | 'notes';
 
@@ -16,8 +15,6 @@ export default function IdeaDetail() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
-  const [editingTags, setEditingTags] = useState(false);
-  const [tagsInput, setTagsInput] = useState('');
 
   // Fetch idea
   const ideaQuery = useQuery({
@@ -266,7 +263,7 @@ function TabOverview({ idea }: { idea: IdeaDetailResponse }) {
               Location
             </p>
             <p style={{ fontSize: 15, color: 'var(--text-primary)' }}>
-              {decomp.location?.city}, {decomp.location?.state} || 'N/A'
+              {decomp.location?.city && decomp.location?.state ? `${decomp.location.city}, ${decomp.location.state}` : 'N/A'}
             </p>
           </div>
           <div>
@@ -900,7 +897,6 @@ function TabNotes({
               fontFamily: "'Inter', sans-serif",
               fontSize: 13,
               marginBottom: 12,
-              fontFamily: "'Inter', sans-serif",
             }}
             placeholder="Add your notes here..."
           />
