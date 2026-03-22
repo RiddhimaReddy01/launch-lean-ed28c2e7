@@ -5,7 +5,7 @@
 
 // API_BASE must be set via environment variable or fallback to localhost for dev
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10);
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '90000', 10);
 
 export class APIError extends Error {
   constructor(
