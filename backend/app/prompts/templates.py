@@ -8,26 +8,53 @@ Each prompt is a function that takes context and returns a formatted string.
 
 
 def decompose_system() -> str:
-    return """You are a startup idea decomposition engine. Given a business idea description, extract structured searchable components.
+    return """You are a startup idea decomposition engine. Extract structured searchable components for market research.
 
 Return ONLY valid JSON with these exact keys:
 {
-  "business_type": "string - what kind of business (be specific, include 2-3 variants)",
+  "business_type": "string - specific business description (2-3 words, be concrete)",
   "location": {
-    "city": "string",
-    "state": "string (2-letter abbreviation)",
-    "county": "string",
-    "metro": "string (metro area name)"
+    "city": "string or empty",
+    "state": "string (2-letter abbreviation) or empty",
+    "county": "string or empty",
+    "metro": "string or empty"
   },
   "target_customers": ["string array - 2-4 customer segments"],
-  "price_tier": "string (budget/mid-range/premium with estimated $ range)",
-  "source_domains": ["string array - 4-8 domains to search, choose from: yelp.com, google.com/maps, trustpilot.com, g2.com, capterra.com, producthunt.com, news.ycombinator.com, stackoverflow.com, serverfault.com, craigslist.org, meetup.com, eventbrite.com, tripadvisor.com, city-data.com/forum, amazon.com"],
-  "subreddits": ["string array - optional, leave empty if not important"],
-  "review_platforms": ["string array - relevant review platforms (yelp, google, etc.)"],
-  "search_queries": ["string array - 5-8 Google search queries to find competitors, reviews, community discussions, and pain points for this exact business type and location"]
+  "price_tier": "string (budget/mid-range/premium with $ range estimate)",
+  "source_domains": ["string array - 4-8 domains to search"],
+  "subreddits": ["string array - optional communities"],
+  "review_platforms": ["string array - relevant platforms"],
+  "search_queries": ["string array - 5-8 specific Google search queries"]
 }
 
-Be specific to the location. Prefer source_domains over subreddits for community and review signals."""
+EXAMPLES:
+Example 1:
+Idea: "Cold-pressed juice bar subscription in San Francisco"
+Output: {
+  "business_type": "Premium cold-pressed juice subscription service",
+  "location": {"city": "San Francisco", "state": "CA", "county": "", "metro": "Bay Area"},
+  "target_customers": ["Health-conscious professionals", "Fitness enthusiasts in Bay Area"],
+  "price_tier": "premium ($12-20/day)",
+  "source_domains": ["yelp.com", "google.com/maps", "tripadvisor.com", "instagram.com", "craigslist.org"],
+  "subreddits": ["fitness", "nutrition", "sanfrancisco"],
+  "review_platforms": ["yelp", "google"],
+  "search_queries": ["cold pressed juice delivery SF", "juice bar subscription review", "healthy juice delivery San Francisco", "juice cleanse subscription", "organic juice bar alternatives"]
+}
+
+Example 2:
+Idea: "AI tutoring platform for high school students"
+Output: {
+  "business_type": "AI-powered online tutoring platform for high school",
+  "location": {"city": "", "state": "", "county": "", "metro": ""},
+  "target_customers": ["High school students struggling with subjects", "Parents seeking affordable tutoring"],
+  "price_tier": "premium ($15-25/month)",
+  "source_domains": ["g2.com", "capterra.com", "producthunt.com", "trustpilot.com", "news.ycombinator.com"],
+  "subreddits": ["learnprogramming", "education", "highschool"],
+  "review_platforms": ["g2", "trustpilot"],
+  "search_queries": ["online tutoring platform reviews", "AI tutor high school comparison", "affordable tutoring alternatives 2026", "homework help software", "STEM tutoring software"]
+}
+
+Be specific. Match location to domain choices (local = yelp/google maps, SaaS = g2/capterra). Generate search_queries that target competitors, reviews, and pain points."""
 
 
 def decompose_user(idea: str, vertical: str, domain_suggestions: list[str]) -> str:
@@ -38,6 +65,62 @@ def decompose_user(idea: str, vertical: str, domain_suggestions: list[str]) -> s
         f"Inferred vertical: {vertical}\n"
         f"Recommended domains to choose from (pick 6-8): {domains}\n"
     )
+
+
+# ═══ MULTI-STAGE EXTRACTION (Optimized for speed + quality) ═══
+
+
+def decompose_stage1_system() -> str:
+    """Stage 1: Fast extraction of business_type and location only."""
+    return """Extract business type and location from this startup idea. Return ONLY valid JSON:
+{
+  "business_type": "specific business description (2-3 words)",
+  "location": {
+    "city": "city name or empty string",
+    "state": "2-letter state code or empty string"
+  }
+}"""
+
+
+def decompose_stage1_user(idea: str) -> str:
+    """User prompt for stage 1."""
+    return f'Idea: "{idea}"\n\nExtract business type and location only.'
+
+
+def decompose_stage2_system() -> str:
+    """Stage 2: Detailed extraction given business_type and location context."""
+    return """Extract customer segments, pricing, source domains, and search queries for this business.
+
+Return ONLY valid JSON:
+{
+  "target_customers": ["2-4 customer segments"],
+  "price_tier": "budget/mid-range/premium with $ range",
+  "source_domains": ["4-8 domains from suggestions"],
+  "subreddits": ["optional communities, can be empty"],
+  "review_platforms": ["relevant platforms"],
+  "search_queries": ["5-8 specific Google search queries"]
+}"""
+
+
+def decompose_stage2_user(
+    idea: str,
+    business_type: str,
+    city: str,
+    state: str,
+    vertical: str,
+    domain_suggestions: list[str],
+) -> str:
+    """User prompt for stage 2 with context from stage 1."""
+    domains = ", ".join(domain_suggestions[:10])
+    location_str = f"{city}, {state}" if city and state else (city or state or "nationwide")
+
+    return f"""Business: {business_type} in {location_str}
+Original idea: "{idea}"
+Vertical: {vertical}
+
+Recommended domains (pick 4-8): {domains}
+
+Extract detailed market research components for this business."""
 
 
 # ═══ MODULE 1: DISCOVER ═══

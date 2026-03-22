@@ -29,8 +29,8 @@ DEMO_IDEAS = {
                     "willingness_to_pay_score": 8,
                     "mention_count": 89,
                     "evidence": [
-                        {"quote": "Always have to wait 10+ min for fresh juice", "source": "reddit", "score": 9},
-                        {"quote": "Would switch to subscription if same-day delivery", "source": "yelp", "score": 8},
+                        {"quote": "Always have to wait 10+ min for fresh juice", "source": "reddit", "source_url": "https://reddit.com/r/fitness/comments/abc123", "score": 9},
+                        {"quote": "Would switch to subscription if same-day delivery", "source": "yelp", "source_url": "https://yelp.com/biz/juice-bar-sf/reviews/xyz789", "score": 8},
                     ],
                     "source_platforms": ["reddit", "yelp"],
                     "audience_estimate": "2.3M fitness enthusiasts in Bay Area",
@@ -45,8 +45,8 @@ DEMO_IDEAS = {
                     "willingness_to_pay_score": 8,
                     "mention_count": 64,
                     "evidence": [
-                        {"quote": "Most juice bars use pasteurized juice", "source": "reddit", "score": 8},
-                        {"quote": "Willing to pay premium for cold-pressed", "source": "reddit", "score": 8},
+                        {"quote": "Most juice bars use pasteurized juice", "source": "reddit", "source_url": "https://reddit.com/r/nutrition/comments/def456", "score": 8},
+                        {"quote": "Willing to pay premium for cold-pressed", "source": "reddit", "source_url": "https://reddit.com/r/health/comments/ghi789", "score": 8},
                     ],
                     "source_platforms": ["reddit"],
                     "audience_estimate": "1.1M premium consumers",

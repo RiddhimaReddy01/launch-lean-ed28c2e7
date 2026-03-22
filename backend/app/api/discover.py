@@ -16,6 +16,8 @@ from app.services.google_search import run_search_queries, build_discover_querie
 from app.services.data_cleaner import (
     clean_reddit_posts, clean_search_results, merge_all_sources, build_source_summary,
 )
+from app.services.cache_service import get_cached_discover, cache_discover
+from app.services.ranking_service import calculate_composite_score
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -35,6 +37,12 @@ async def discover_insights(
     city = loc.get("city", "")
     state = loc.get("state", "")
     business_type = decomp.get("business_type", "")
+
+    # ✅ CHECK DATABASE CACHE FIRST (for similar queries)
+    cached = await get_cached_discover(business_type, city, state)
+    if cached:
+        logger.info(f"✅ Cache hit: discover for {business_type} in {city}, {state}")
+        return cached
 
     # Fetch Reddit posts
     reddit_posts = []
@@ -66,37 +74,42 @@ async def discover_insights(
     merged_sampled = _sample_posts(merged, budget=POST_BUDGET, per_group=SAMPLE_PER_GROUP)
     fallback = _fallback_insights(merged_sampled)
 
-    return _post_process(fallback, sources)
+    response = _post_process(fallback, sources)
+
+    # ✅ STORE IN DATABASE CACHE for future similar queries
+    await cache_discover(business_type, city, state, response)
+
+    return response
 
 
 def _post_process(scored_data: dict, sources: list[dict]) -> DiscoverResponse:
-    """Format insights into response model."""
+    """Format insights into response model with composite scoring."""
     raw_insights = scored_data.get("insights", [])
 
     insights = []
     for i, raw in enumerate(raw_insights[:12]):
-        pain_score = raw.get("pain_score", raw.get("score", 0))
-        if isinstance(pain_score, (int, float)) and pain_score > 10:
-            pain_score = pain_score / 10.0
+        # Extract component scores
+        freq = raw.get("frequency", raw.get("frequency_score", 0))
+        mention_count = int(freq) if isinstance(freq, (int, float)) else 0
 
+        # Build evidence list with source URLs
         evidence_list = []
         for ev in raw.get("evidence", [])[:2]:
             evidence_list.append(Evidence(
                 quote=ev.get("quote", ""),
                 source=ev.get("source", ""),
+                source_url=ev.get("source_url", ""),  # ✅ New: source URL
                 score=ev.get("score", 0),
                 upvotes=ev.get("upvotes"),
                 date=ev.get("date"),
             ))
 
-        freq = raw.get("frequency", raw.get("frequency_score", 0))
-        mention_count = int(freq) if isinstance(freq, (int, float)) else 0
-
+        # Create insight object
         insight = Insight(
             id=f"ins_{i+1:03d}",
             type=_normalize_type(raw.get("type", "pain_point")),
             title=raw.get("title", ""),
-            score=round(min(10.0, max(0.0, float(pain_score))), 1),
+            score=0.0,  # Will be set by composite scoring below
             frequency_score=_clamp(raw.get("frequency_score", 0)),
             intensity_score=_clamp(raw.get("intensity_score", 0)),
             willingness_to_pay_score=_clamp(raw.get("willingness_to_pay_score", 0)),
@@ -105,9 +118,15 @@ def _post_process(scored_data: dict, sources: list[dict]) -> DiscoverResponse:
             source_platforms=raw.get("source_platforms", []),
             audience_estimate=raw.get("audience_estimate", ""),
         )
+
+        # ✅ Calculate composite score
+        insight.score = calculate_composite_score(raw)
+
         insights.append(insight)
 
+    # ✅ Sort by composite score (descending = best insights first)
     insights.sort(key=lambda x: x.score, reverse=True)
+
     source_models = [SourceSummary(**s) for s in sources]
 
     return DiscoverResponse(sources=source_models, insights=insights)

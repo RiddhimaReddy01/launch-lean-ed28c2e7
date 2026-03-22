@@ -41,7 +41,8 @@ class DiscoverRequest(BaseModel):
 
 class Evidence(BaseModel):
     quote: str = ""
-    source: str = ""
+    source: str = ""  # "reddit" | "yelp" | "google" | "twitter" | etc
+    source_url: str = ""  # Clickable link to actual post/review
     score: int = 0
     upvotes: Optional[int] = None
     date: Optional[str] = None

@@ -12,7 +12,12 @@ import time
 from app.core.auth import optional_user
 from app.schemas.models import DecomposeRequest, DecomposeResponse, Location
 from app.services.llm_client import call_llm, AllProvidersExhaustedError
-from app.prompts.templates import decompose_system, decompose_user
+from app.services.cache_service import get_cached_decompose, cache_decompose
+from app.prompts.templates import (
+    decompose_system, decompose_user,
+    decompose_stage1_system, decompose_stage1_user,
+    decompose_stage2_system, decompose_stage2_user,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,43 +34,90 @@ async def decompose_idea(
     idea = _preclean(req.idea)
     logger.info(f"🟢 Idea cleaned: {idea}")
 
-    # ── Stage 2: Input Cleaning ──
+    # Input validation
     if len(idea.split()) < 3:
         raise HTTPException(status_code=400, detail="Idea must be at least 3 words")
 
-    # Stage 2.5: Cache check
+    # ✅ Check in-memory cache first (fastest)
     cached = await _cache_get(idea)
     if cached:
+        logger.info(f"✅ In-memory cache hit")
         return cached
 
-    # Infer vertical & defaults before LLM
-    vertical = _infer_vertical(idea)
-    defaults = _default_domains_for_vertical(vertical)
+    # ✅ Check database cache second (for persistence across restarts)
+    db_cached = await get_cached_decompose(idea)
+    if db_cached:
+        logger.info(f"✅ Database cache hit")
+        await _cache_set(idea, db_cached)  # Repopulate in-memory
+        return db_cached
 
-    # ── Stage 3: Build LLM Prompt ──
-    system = decompose_system()
-    user_prompt = decompose_user(idea, vertical, defaults)
-
-    # ── Stage 4: LLM Call with Fallback ──
+    # ── STAGE 1: Fast extraction (business_type + location) ──
+    logger.info("🔵 Stage 1: Extracting business type and location...")
     try:
-        raw = await call_llm(
-            system_prompt=system,
-            user_prompt=user_prompt,
-            temperature=0.1,
-            max_tokens=800,
+        stage1_raw = await call_llm(
+            system_prompt=decompose_stage1_system(),
+            user_prompt=decompose_stage1_user(idea),
+            temperature=0.05,
+            max_tokens=150,
             json_mode=True,
         )
-        resp = _post_process(raw, defaults)
+        business_type = stage1_raw.get("business_type", "")
+        location_raw = stage1_raw.get("location", {})
+        stage1_location = Location(
+            city=location_raw.get("city", ""),
+            state=_normalize_state(location_raw.get("state", "")),
+        )
+        logger.info(f"🟢 Stage 1 done: {business_type} in {stage1_location.city}, {stage1_location.state}")
     except Exception as e:
-        # Fallback: deterministic template when LLM fails
-        logger.warning(f"LLM failed ({type(e).__name__}), using fallback decomposition")
-        try:
-            resp = _fallback_decompose(idea, vertical, defaults)
-        except Exception as fallback_err:
-            logger.error(f"Fallback also failed: {fallback_err}")
-            raise HTTPException(status_code=500, detail="Could not decompose idea")
+        logger.warning(f"Stage 1 failed ({type(e).__name__}), fallback extraction")
+        business_type = idea[:80]
+        stage1_location = Location()
 
+    # ── STAGE 2: Detailed extraction (customers, pricing, queries) ──
+    logger.info("🔵 Stage 2: Extracting detailed components...")
+    vertical = _infer_vertical(business_type or idea)
+    defaults = _default_domains_for_vertical(vertical)
+
+    try:
+        stage2_raw = await call_llm(
+            system_prompt=decompose_stage2_system(),
+            user_prompt=decompose_stage2_user(
+                idea=idea,
+                business_type=business_type,
+                city=stage1_location.city,
+                state=stage1_location.state,
+                vertical=vertical,
+                domain_suggestions=defaults,
+            ),
+            temperature=0.05,
+            max_tokens=500,
+            json_mode=True,
+        )
+        logger.info(f"🟢 Stage 2 done: Got target_customers, price_tier, source_domains, search_queries")
+    except Exception as e:
+        logger.warning(f"Stage 2 failed ({type(e).__name__}), using defaults")
+        stage2_raw = {}
+
+    # ── Combine and post-process ──
+    combined = {
+        "business_type": business_type,
+        "location": {
+            "city": stage1_location.city,
+            "state": stage1_location.state,
+        },
+        **stage2_raw,
+    }
+
+    try:
+        resp = _post_process(combined, defaults)
+    except Exception as e:
+        logger.warning(f"Post-process failed ({type(e).__name__}), using fallback")
+        resp = _fallback_decompose(idea, vertical, defaults)
+
+    # ✅ Store in both caches: in-memory (fast) + database (persistent)
     await _cache_set(idea, resp)
+    await cache_decompose(idea, resp)
+
     return resp
 
 
