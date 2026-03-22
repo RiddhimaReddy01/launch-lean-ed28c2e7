@@ -227,14 +227,13 @@ async def generate_full_setup(decomposition: dict, costs: dict, root_causes: lis
     # 1. COST TIERS (deterministic, instant)
     cost_tiers = generate_cost_tiers(costs)
 
-    # 2. SUPPLIERS (LLM + cache)
-    suppliers = await get_or_generate_suppliers(business_type, city, state, selected_tier, target_customers)
-
-    # 3. TEAM (LLM + cache)
-    team = await get_or_generate_team(business_type, selected_tier, root_causes, costs)
-
-    # 4. TIMELINE (LLM + cache)
-    timeline = await get_or_generate_timeline(business_type, selected_tier, pain_intensity, root_causes, costs)
+    # 2-4. SUPPLIERS, TEAM, TIMELINE in PARALLEL (all independent LLM calls)
+    import asyncio
+    suppliers, team, timeline = await asyncio.gather(
+        get_or_generate_suppliers(business_type, city, state, selected_tier, target_customers),
+        get_or_generate_team(business_type, selected_tier, root_causes, costs),
+        get_or_generate_timeline(business_type, selected_tier, pain_intensity, root_causes, costs)
+    )
 
     return {
         "cost_tiers": cost_tiers,

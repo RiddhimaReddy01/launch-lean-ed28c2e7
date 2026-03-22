@@ -47,25 +47,34 @@ async def discover_insights(
         logger.info(f"✅ Cache hit: discover for {business_type} in {city}, {state}")
         return cached
 
-    # Fetch Reddit posts
+    # ✅ PARALLEL: Fetch Reddit posts and Google search in parallel
+    import asyncio
+
     reddit_posts = []
     search_queries_list = decomp.get("search_queries", [])
     reddit_search_q = search_queries_list[0] if search_queries_list else f"{business_type} {city} {state}".strip()
 
-    if reddit_search_q:
-        try:
-            raw_search_posts = await fetch_search_posts(reddit_search_q, limit=60)
-            reddit_posts = [extract_post_fields(p) for p in raw_search_posts]
-        except Exception as e:
-            logger.warning(f"Reddit search failed: {e}")
-
-    # Fetch Google search results
     search_queries = decomp.get("search_queries", [])
     if not search_queries:
         search_queries = build_discover_queries(decomp)
     search_queries = search_queries[:SERPER_QUERY_CAP]
     location_str = f"{city}, {state}" if city and state else None
-    raw_search = await run_search_queries(search_queries, location=location_str, num_per_query=10)
+
+    # Run both API calls in parallel
+    async def fetch_reddit():
+        if not reddit_search_q:
+            return []
+        try:
+            raw_search_posts = await fetch_search_posts(reddit_search_q, limit=60)
+            return [extract_post_fields(p) for p in raw_search_posts]
+        except Exception as e:
+            logger.warning(f"Reddit search failed: {e}")
+            return []
+
+    reddit_posts, raw_search = await asyncio.gather(
+        fetch_reddit(),
+        run_search_queries(search_queries, location=location_str, num_per_query=10)
+    )
 
     # Clean and merge data
     cleaned_reddit = clean_reddit_posts(reddit_posts)
