@@ -15,6 +15,13 @@ export interface ValidationExperiment {
   price_tolerance_avg: number;
   community_engagement: number;
   reddit_upvotes: number;
+  // Revenue validation
+  paid_signups: number;
+  revenue_collected: number;
+  ad_spend: number;
+  // Calculated economics
+  cac: number | null;
+  ltv_cac_ratio: number | null;
   verdict: string | null;
   reasoning: string | null;
   created_at: string | null;
@@ -31,6 +38,10 @@ export interface CreateValidationExperimentRequest {
     price_tolerance_avg: number;
     community_engagement: number;
     reddit_upvotes: number;
+    // Revenue validation
+    paid_signups?: number;
+    revenue_collected?: number;
+    ad_spend?: number;
   };
 }
 
@@ -70,6 +81,9 @@ export async function updateValidationExperiment(
     price_tolerance_avg: number;
     community_engagement: number;
     reddit_upvotes: number;
+    paid_signups: number;
+    revenue_collected: number;
+    ad_spend: number;
   }>,
 ): Promise<ValidationExperiment> {
   return request<ValidationExperiment>(

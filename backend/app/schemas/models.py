@@ -60,6 +60,8 @@ class Insight(BaseModel):
     evidence: list[Evidence] = Field(default_factory=list)
     source_platforms: list[str] = Field(default_factory=list)
     audience_estimate: str = ""
+    confidence: str = "medium"  # high | medium | low
+    confidence_reason: str = ""  # "12 mentions across 2 platforms"
 
 
 class SourceSummary(BaseModel):
@@ -95,6 +97,7 @@ class OpportunityResponse(BaseModel):
     sam: MarketSize = Field(default_factory=MarketSize)
     som: MarketSize = Field(default_factory=MarketSize)
     funnel: Optional[dict] = None
+    sanity_check: Optional[dict] = None  # Validation against CUSTOMERS
 
 
 class CustomerSegment(BaseModel):
@@ -105,6 +108,7 @@ class CustomerSegment(BaseModel):
     primary_need: str = ""
     spending_pattern: str = ""
     where_to_find: str = ""
+    market_coverage_percent: float = 0.0  # % of SAM
 
 
 class CustomersResponse(BaseModel):
@@ -163,6 +167,8 @@ class SetupRequest(BaseModel):
     insight: Insight  # Strongly typed insight data
     decomposition: DecomposeResponse  # Strongly typed decomposition
     analysis_context: Optional[dict] = None
+    prior_context: Optional[dict] = None  # COSTS, ROOT_CAUSES, CUSTOMERS from ANALYZE
+    selected_tier: str = "MID"  # LEAN | MID | PREMIUM
 
 
 class LineItem(BaseModel):
@@ -255,10 +261,26 @@ class Community(BaseModel):
 
 
 class Scorecard(BaseModel):
-    waitlist_target: int = 150
-    survey_target: int = 50
+    waitlist_target: int = 50  # Start realistic (50 not 500)
+    survey_target: int = 10
     switch_pct_target: int = 60
-    price_tolerance_target: str = ""
+    price_tolerance_target: float = 12.0
+    # NEW: Revenue targets
+    paid_signups_target: int = 5  # At least 10% conversion
+    ltv_cac_ratio_target: float = 3.0  # LTV/CAC > 3x is healthy
+    # Customization (NEW)
+    is_custom: bool = False  # User modified targets?
+
+
+class ValidationStrategy(BaseModel):
+    """Recommended validation approach based on business model"""
+    business_model: str = ""  # B2C SaaS, Local Service, Marketplace, etc
+    recommended_methods: list[str] = Field(default_factory=list)  # What to test
+    effort_estimate_hours: int = 0
+    timeline_weeks: int = 0
+    typical_conversion_rate: float = 0.0
+    typical_cac: float = 0.0
+    description: str = ""
 
 
 class ValidateResponse(BaseModel):
@@ -267,6 +289,8 @@ class ValidateResponse(BaseModel):
     whatsapp_message: Optional[WhatsAppMessage] = None
     communities: list[Community] = Field(default_factory=list)
     scorecard: Scorecard = Field(default_factory=Scorecard)
+    # NEW: Strategy guidance
+    strategy: Optional[ValidationStrategy] = None
 
 
 # ═══ VALIDATION EXPERIMENT TRACKING ═══
@@ -279,6 +303,11 @@ class ValidationExperimentMetrics(BaseModel):
     price_tolerance_avg: float = 0.0
     community_engagement: int = 0
     reddit_upvotes: int = 0
+    # Revenue validation (NEW)
+    paid_signups: int = 0
+    revenue_collected: float = 0.0
+    # Cost tracking (NEW)
+    ad_spend: float = 0.0
 
 
 class CreateValidationExperimentRequest(BaseModel):
@@ -297,6 +326,14 @@ class ValidationExperimentResponse(BaseModel):
     price_tolerance_avg: float = 0.0
     community_engagement: int = 0
     reddit_upvotes: int = 0
+    # Revenue validation (NEW)
+    paid_signups: int = 0
+    revenue_collected: float = 0.0
+    # Cost tracking (NEW)
+    ad_spend: float = 0.0
+    # Economics (NEW - calculated)
+    cac: Optional[float] = None  # Cost per acquisition
+    ltv_cac_ratio: Optional[float] = None  # LTV/CAC ratio
     verdict: Optional[str] = None
     reasoning: Optional[str] = None
     created_at: Optional[str] = None
@@ -310,3 +347,8 @@ class UpdateValidationExperimentRequest(BaseModel):
     price_tolerance_avg: Optional[float] = None
     community_engagement: Optional[int] = None
     reddit_upvotes: Optional[int] = None
+    # Revenue validation (NEW)
+    paid_signups: Optional[int] = None
+    revenue_collected: Optional[float] = None
+    # Cost tracking (NEW)
+    ad_spend: Optional[float] = None

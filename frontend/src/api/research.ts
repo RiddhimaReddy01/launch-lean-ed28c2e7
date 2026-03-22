@@ -48,10 +48,12 @@ export async function generateSetup(
   insight: unknown,
   decomposition: unknown,
   analysis_context?: unknown,
+  selected_tier: string = 'MID',
+  prior_context?: unknown,
 ): Promise<SetupResponse> {
-  return request<SetupResponse>('/api/generate-setup', {
+  return request<SetupResponse>('/api/setup', {
     method: 'POST',
-    body: JSON.stringify({ insight, decomposition, analysis_context }),
+    body: JSON.stringify({ insight, decomposition, analysis_context, selected_tier, prior_context }),
   });
 }
 

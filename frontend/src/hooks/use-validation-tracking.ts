@@ -61,6 +61,9 @@ export function useValidationTracking() {
         price_tolerance_avg: number;
         community_engagement: number;
         reddit_upvotes: number;
+        paid_signups?: number;
+        revenue_collected?: number;
+        ad_spend?: number;
       },
     ) => {
       return createMutation.mutateAsync({
@@ -82,6 +85,9 @@ export function useValidationTracking() {
         price_tolerance_avg: number;
         community_engagement: number;
         reddit_upvotes: number;
+        paid_signups: number;
+        revenue_collected: number;
+        ad_spend: number;
       }>,
     ) => {
       return updateMutation.mutateAsync({

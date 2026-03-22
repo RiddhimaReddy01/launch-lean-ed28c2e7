@@ -5,9 +5,11 @@ Pipeline: Data ingestion → Cleaning → Merging → Insight generation → Res
 """
 
 import logging
+import json
 from fastapi import APIRouter, Depends
 
 from app.core.auth import optional_user
+from app.core.llm import call_llm
 from app.schemas.models import (
     DiscoverRequest, DiscoverResponse, Insight, Evidence, SourceSummary,
 )
@@ -18,6 +20,7 @@ from app.services.data_cleaner import (
 )
 from app.services.cache_service import get_cached_discover, cache_discover
 from app.services.ranking_service import calculate_composite_score
+from app.prompts.templates import discover_extract_signals_system, discover_extract_signals_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -70,11 +73,15 @@ async def discover_insights(
     merged = merge_all_sources(cleaned_reddit, cleaned_search, max_items=200)
     sources = build_source_summary(merged)
 
-    # Generate insights from data
+    # ✅ INTELLIGENT INSIGHT EXTRACTION (LLM with all 4 signals)
     merged_sampled = _sample_posts(merged, budget=POST_BUDGET, per_group=SAMPLE_PER_GROUP)
-    fallback = _fallback_insights(merged_sampled)
 
-    response = _post_process(fallback, sources)
+    # Call LLM to extract insights with Intensity, Willingness-to-Pay, Market Size, Urgency
+    llm_insights = await _extract_insights_with_signals(
+        merged_sampled, business_type, city, state
+    )
+
+    response = _post_process(llm_insights, sources)
 
     # ✅ STORE IN DATABASE CACHE for future similar queries
     await cache_discover(business_type, city, state, response)
@@ -83,43 +90,62 @@ async def discover_insights(
 
 
 def _post_process(scored_data: dict, sources: list[dict]) -> DiscoverResponse:
-    """Format insights into response model with composite scoring."""
+    """Format insights into response model with LLM-extracted signal values."""
     raw_insights = scored_data.get("insights", [])
 
     insights = []
     for i, raw in enumerate(raw_insights[:12]):
-        # Extract component scores
-        freq = raw.get("frequency", raw.get("frequency_score", 0))
-        mention_count = int(freq) if isinstance(freq, (int, float)) else 0
+        # Extract all 4 signals from LLM (now intelligent, not hardcoded)
+        mention_count = raw.get("mention_count", 0)
 
-        # Build evidence list with source URLs
+        # Build evidence list with supporting quotes from analysis
         evidence_list = []
-        for ev in raw.get("evidence", [])[:2]:
+        customer_quote = raw.get("customer_quote", "")
+        if customer_quote:
             evidence_list.append(Evidence(
-                quote=ev.get("quote", ""),
-                source=ev.get("source", ""),
-                source_url=ev.get("source_url", ""),  # ✅ New: source URL
-                score=ev.get("score", 0),
-                upvotes=ev.get("upvotes"),
-                date=ev.get("date"),
+                quote=customer_quote,
+                source=raw.get("source_platforms", ["research"])[0] if raw.get("source_platforms") else "research",
+                source_url="",
+                score=0,
+                upvotes=None,
+                date=None,
             ))
 
-        # Create insight object
+        explanation = raw.get("explanation", "")
+        if explanation and len(evidence_list) < 3:
+            evidence_list.append(Evidence(
+                quote=explanation,
+                source="analysis",
+                source_url="",
+                score=0,
+                upvotes=None,
+                date=None,
+            ))
+
+        # Create insight object with LLM-extracted signal values
         insight = Insight(
             id=f"ins_{i+1:03d}",
             type=_normalize_type(raw.get("type", "pain_point")),
             title=raw.get("title", ""),
             score=0.0,  # Will be set by composite scoring below
-            frequency_score=_clamp(raw.get("frequency_score", 0)),
-            intensity_score=_clamp(raw.get("intensity_score", 0)),
-            willingness_to_pay_score=_clamp(raw.get("willingness_to_pay_score", 0)),
+            # ✅ Use LLM-extracted signal values (not hardcoded defaults)
+            frequency_score=_clamp(raw.get("frequency_score", raw.get("mention_count", 0) / 3)),
+            intensity_score=_clamp(raw.get("intensity", 5)),  # LLM extracts as "intensity"
+            willingness_to_pay_score=_clamp(raw.get("willingness_to_pay", 5)),  # LLM extracts as "willingness_to_pay"
             mention_count=mention_count,
             evidence=evidence_list[:3],
             source_platforms=raw.get("source_platforms", []),
-            audience_estimate=raw.get("audience_estimate", ""),
+            audience_estimate=raw.get("market_size_estimate", ""),  # Market size described as text
         )
 
-        # ✅ Calculate composite score
+        # ✅ Enrich raw data with LLM values for composite scoring
+        raw["frequency_score"] = raw.get("mention_count", 0) / 3  # Derive from mention count
+        raw["intensity_score"] = raw.get("intensity", 5)
+        raw["willingness_to_pay_score"] = raw.get("willingness_to_pay", 5)
+        raw["market_size"] = raw.get("market_size", 5)  # Direct from LLM
+        raw["urgency"] = raw.get("urgency", 5)  # Direct from LLM
+
+        # ✅ Calculate composite score with LLM-informed signals
         insight.score = calculate_composite_score(raw)
 
         insights.append(insight)
@@ -221,6 +247,54 @@ def _fallback_insights(posts: list[dict]) -> dict:
         }]
 
     return {"insights": insights[:5]}
+
+
+async def _extract_insights_with_signals(
+    posts: list[dict], business_type: str, city: str, state: str
+) -> dict:
+    """
+    ✅ NEW: LLM-powered insight extraction with intelligent signal detection.
+    Extracts: Intensity, Willingness-to-Pay, Market Size, Urgency from actual data.
+    """
+    if not posts:
+        logger.warning("[DISCOVER] No posts to analyze, using fallback")
+        return {"insights": []}
+
+    try:
+        # Call LLM to extract insights with all 4 signals
+        system_prompt = discover_extract_signals_system(business_type, city, state)
+        user_prompt = discover_extract_signals_user(posts, business_type, city, state)
+
+        logger.info(f"[DISCOVER] Extracting insights with LLM ({len(posts)} posts)")
+
+        response = await call_llm(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=0.4,  # Moderate - balance consistency with insight discovery
+            max_tokens=2000,  # Room for 8-12 detailed insights
+            json_mode=True,
+        )
+
+        # Parse LLM response
+        try:
+            insights_data = json.loads(response) if isinstance(response, str) else response
+            insights = insights_data.get("insights", [])
+
+            if not insights:
+                logger.warning("[DISCOVER] LLM returned empty insights, using fallback")
+                return _fallback_insights(posts)
+
+            logger.info(f"[DISCOVER] LLM extracted {len(insights)} insights")
+            return {"insights": insights}
+
+        except json.JSONDecodeError as e:
+            logger.error(f"[DISCOVER] Failed to parse LLM response: {e}")
+            return _fallback_insights(posts)
+
+    except Exception as e:
+        logger.error(f"[DISCOVER] LLM extraction failed: {e}. Falling back to keyword analysis.")
+        # Graceful fallback to keyword-based analysis
+        return _fallback_insights(posts)
 
 
 def _normalize_type(t: str) -> str:

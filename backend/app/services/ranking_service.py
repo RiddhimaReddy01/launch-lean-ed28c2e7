@@ -25,18 +25,26 @@ def calculate_composite_score(insight: dict) -> float:
     intensity = _clamp(insight.get("intensity_score", 0))
     willingness = _clamp(insight.get("willingness_to_pay_score", 0))
 
-    # Market size signal: derived from evidence count + source platforms
-    evidence_count = len(insight.get("evidence", []))
-    source_count = len(set(insight.get("source_platforms", [])))
-    # Evidence = 5 sources, each on 2 platforms = market_size ~7-8
-    market_size = min(10.0, (evidence_count * 1.2) + (source_count * 1.5))
-    market_size = _clamp(market_size)
+    # Market size signal: prefer LLM-extracted value if available, else derive from evidence
+    if "market_size" in insight and insight["market_size"] != 0:
+        # ✅ Use LLM-extracted market_size (intelligence-based, not heuristic)
+        market_size = _clamp(insight.get("market_size", 5))
+    else:
+        # Fallback: derive from evidence count + source platforms
+        evidence_count = len(insight.get("evidence", []))
+        source_count = len(set(insight.get("source_platforms", [])))
+        market_size = min(10.0, (evidence_count * 1.2) + (source_count * 1.5))
+        market_size = _clamp(market_size)
 
-    # Urgency signal: recent mentions weighted higher
-    # Simple heuristic: high mention count = trending/active discussion
-    mention_count = insight.get("mention_count", 0)
-    urgency = 8.0 if mention_count > 20 else (7.0 if mention_count > 10 else 5.0)
-    urgency = _clamp(urgency)
+    # Urgency signal: prefer LLM-extracted value if available, else derive from mention spike
+    if "urgency" in insight and insight["urgency"] != 0:
+        # ✅ Use LLM-extracted urgency (trending analysis, not just mention count)
+        urgency = _clamp(insight.get("urgency", 5))
+    else:
+        # Fallback heuristic: high mention count = trending/active discussion
+        mention_count = insight.get("mention_count", 0)
+        urgency = 8.0 if mention_count > 20 else (7.0 if mention_count > 10 else 5.0)
+        urgency = _clamp(urgency)
 
     # Weighted composite
     composite = (

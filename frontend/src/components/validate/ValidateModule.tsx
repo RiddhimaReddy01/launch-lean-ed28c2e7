@@ -20,6 +20,22 @@ const METHOD_TO_CHANNEL: Record<string, string> = {
   direct: 'whatsapp',
 };
 
+// Calculate CAC and LTV/CAC ratio
+function calculateEconomics(paidSignups: number, revenue: number, adSpend: number) {
+  const cac = paidSignups > 0 && adSpend > 0 ? adSpend / paidSignups : null;
+
+  let ltvCacRatio = null;
+  if (paidSignups > 0) {
+    const avgCustomerValue = revenue / paidSignups;
+    const estimatedLtv = avgCustomerValue * 12; // 12 months
+    if (cac && cac > 0) {
+      ltvCacRatio = estimatedLtv / cac;
+    }
+  }
+
+  return { cac, ltvCacRatio };
+}
+
 export default function ValidateModule() {
   const { idea, selectedInsight } = useIdea();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,11 +78,15 @@ export default function ValidateModule() {
     try {
       await saveExperiment(idea, Array.from(selectedMethods), {
         waitlist_signups: metrics.find((m) => m.id === 'signups')?.actual || 0,
-        survey_completions: metrics.find((m) => m.id === 'survey')?.actual || 0,
+        survey_completions: metrics.find((m) => m.id === 'surveys')?.actual || 0,
         would_switch_rate: metrics.find((m) => m.id === 'switch')?.actual || 0,
         price_tolerance_avg: metrics.find((m) => m.id === 'price')?.actual || 0,
         community_engagement: metrics.find((m) => m.id === 'engagement')?.actual || 0,
         reddit_upvotes: metrics.find((m) => m.id === 'reddit')?.actual || 0,
+        // NEW: Revenue metrics
+        paid_signups: metrics.find((m) => m.id === 'paid_signups')?.actual || 0,
+        revenue_collected: metrics.find((m) => m.id === 'revenue')?.actual || 0,
+        ad_spend: metrics.find((m) => m.id === 'ad_spend')?.actual || 0,
       });
 
       toast({
@@ -125,21 +145,39 @@ export default function ValidateModule() {
     const signups = metrics.find((m) => m.id === 'signups')?.actual || 0;
     const switchRate = metrics.find((m) => m.id === 'switch')?.actual || 0;
     const price = metrics.find((m) => m.id === 'price')?.actual || 0;
-    const hasData = signups > 0 || switchRate > 0 || price > 0;
+    const paidSignups = metrics.find((m) => m.id === 'paid_signups')?.actual || 0;
+    const revenue = metrics.find((m) => m.id === 'revenue')?.actual || 0;
+    const adSpend = metrics.find((m) => m.id === 'ad_spend')?.actual || 0;
+
+    const hasData = signups > 0 || switchRate > 0 || price > 0 || paidSignups > 0;
 
     if (!hasData) return { verdict: 'awaiting' as Verdict, reasoning: 'Enter your experiment results to get a recommendation.' };
 
-    if (signups >= 150 && switchRate >= 60 && price >= 8)
-      return { verdict: 'go' as Verdict, reasoning: 'Strong demand signal with healthy price tolerance. Move forward with confidence.' };
+    // Revenue validation: check if people actually paid
+    if (paidSignups === 0 && signups > 0) {
+      return { verdict: 'pivot' as Verdict, reasoning: `High interest (${signups} signups) but zero conversions to paid. Adjust pricing, positioning, or value prop.` };
+    }
 
+    // Strong signal: good signups + intent + price + revenue
+    if (signups >= 50 && switchRate >= 60 && price >= 12 && paidSignups > 0) {
+      const { cac, ltvCacRatio } = calculateEconomics(paidSignups, revenue, adSpend);
+      const ltvText = ltvCacRatio ? ` LTV/CAC: ${ltvCacRatio.toFixed(1)}x.` : '';
+      return { verdict: 'go' as Verdict, reasoning: `Strong demand signal. ${signups} signups, ${paidSignups} paid.${ltvText} Move forward.` };
+    }
+
+    // Weak signal: low engagement
     if (signups < 30 && switchRate < 30)
       return { verdict: 'kill' as Verdict, reasoning: 'Low interest across channels. Consider a fundamentally different value proposition.' };
 
-    if (signups >= 80 && switchRate >= 40)
-      return { verdict: 'pivot' as Verdict, reasoning: 'Moderate interest — refine positioning, adjust pricing, or narrow the segment.' };
+    // Moderate signal: some traction
+    if (signups >= 30 && switchRate >= 40 && paidSignups > 0) {
+      const conversion = signups > 0 ? ((paidSignups / signups) * 100).toFixed(0) : 0;
+      return { verdict: 'pivot' as Verdict, reasoning: `Moderate interest (${signups} signups, ${conversion}% paid conversion). Refine positioning or pricing.` };
+    }
 
-    if (price < 6 && signups > 50)
-      return { verdict: 'pivot' as Verdict, reasoning: 'Strong interest but low price tolerance — consider repositioning pricing.' };
+    // Price issue
+    if (price < 12 && signups > 50)
+      return { verdict: 'pivot' as Verdict, reasoning: 'Strong interest but low price tolerance. Consider repositioning, bundling, or freemium model.' };
 
     return { verdict: 'pivot' as Verdict, reasoning: 'Mixed signals. Some interest exists but key metrics need improvement.' };
   }, [metrics]);
@@ -148,9 +186,14 @@ export default function ValidateModule() {
   const signupsVal = metrics.find((m) => m.id === 'signups')?.actual || 0;
   const switchVal = metrics.find((m) => m.id === 'switch')?.actual || 0;
   const priceVal = metrics.find((m) => m.id === 'price')?.actual || 0;
+  const paidSignupsVal = metrics.find((m) => m.id === 'paid_signups')?.actual || 0;
+  const revenueVal = metrics.find((m) => m.id === 'revenue')?.actual || 0;
+  const adSpendVal = metrics.find((m) => m.id === 'ad_spend')?.actual || 0;
+
   const demandStrength = signupsVal >= 100 ? 'High' : signupsVal >= 50 ? 'Medium' : 'Low';
   const priceAcceptance = priceVal >= 10 ? 'Strong' : priceVal >= 7 ? 'Moderate' : 'Weak';
   const conversionEst = signupsVal > 0 ? Math.round((switchVal / 100) * signupsVal) : 0;
+  const { cac, ltvCacRatio } = calculateEconomics(paidSignupsVal, revenueVal, adSpendVal);
 
   const verdictConfig: Record<Verdict, { label: string; color: string; bg: string }> = {
     awaiting: { label: 'Awaiting data', color: 'var(--text-muted)', bg: 'var(--surface-input)' },
@@ -302,6 +345,34 @@ export default function ValidateModule() {
           ))}
         </div>
       </div>
+
+      {/* UNIT ECONOMICS */}
+      {(paidSignupsVal > 0 || adSpendVal > 0) && (
+        <div className="mb-16">
+          <p className="font-caption mb-5" style={{ fontSize: 11, letterSpacing: '0.06em' }}>UNIT ECONOMICS</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+            {cac !== null && (
+              <div className="rounded-[12px] p-5 text-center" style={{ backgroundColor: 'var(--surface-input)' }}>
+                <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.05em', marginBottom: 8 }}>CAC (Cost per Acquisition)</p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 400, color: 'var(--text-primary)' }}>
+                  ${cac.toFixed(2)}
+                </p>
+              </div>
+            )}
+            {ltvCacRatio !== null && (
+              <div className="rounded-[12px] p-5 text-center" style={{ backgroundColor: 'var(--surface-input)' }}>
+                <p className="font-caption" style={{ fontSize: 11, letterSpacing: '0.05em', marginBottom: 8 }}>LTV/CAC Ratio</p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 400, color: ltvCacRatio >= 3 ? '#2D8B75' : '#D4880F' }}>
+                  {ltvCacRatio.toFixed(1)}x {ltvCacRatio >= 3 ? '✓' : ''}
+                </p>
+                <p className="font-caption" style={{ fontSize: 10, marginTop: 6, color: 'var(--text-muted)' }}>
+                  {ltvCacRatio >= 3 ? 'Healthy' : 'Needs improvement'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* VALIDATION METHODS */}
       <div className="mb-16">
@@ -584,6 +655,36 @@ export default function ValidateModule() {
                         ${exp.price_tolerance_avg.toFixed(2)}
                       </p>
                     </div>
+                    <div>
+                      <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>Paid Signups</p>
+                      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {exp.paid_signups || 0}
+                      </p>
+                    </div>
+                    {exp.revenue_collected > 0 && (
+                      <div>
+                        <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>Revenue</p>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>
+                          ${exp.revenue_collected?.toFixed(0) || 0}
+                        </p>
+                      </div>
+                    )}
+                    {exp.cac && (
+                      <div>
+                        <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>CAC</p>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>
+                          ${exp.cac.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                    {exp.ltv_cac_ratio && (
+                      <div>
+                        <p className="font-caption" style={{ fontSize: 11, marginBottom: 4 }}>LTV/CAC</p>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: exp.ltv_cac_ratio >= 3 ? '#2D8B75' : '#D4880F' }}>
+                          {exp.ltv_cac_ratio.toFixed(1)}x
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {exp.methods.length > 0 && (

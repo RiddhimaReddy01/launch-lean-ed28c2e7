@@ -37,7 +37,9 @@ export default function SetupModule() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const setupQuery = useSetupPlan();
+  const [selectedTier, setSelectedTier] = useState<'LEAN' | 'MID' | 'PREMIUM'>('MID');
+  const setupQuery = useSetupPlan(selectedTier);
+
   useEffect(() => {
     if (setupQuery.error) {
       toast({
@@ -54,7 +56,6 @@ export default function SetupModule() {
   const timelineData = useMemo(() => mapSetupTimeline(setupQuery.data) || [], [setupQuery.data]);
 
   const [activeTab, setActiveTab] = useState<TabKey>('costs');
-  const [selectedTier, setSelectedTier] = useState('recommended');
   const [estimates, setEstimates] = useState<Record<string, Estimate>>({});
   const [includedRoles, setIncludedRoles] = useState<Set<string>>(new Set(['manager', 'barista']));
   const [phases, setPhases] = useState<TimelinePhase[]>(timelineData.map((p) => ({ ...p, tasks: p.tasks.map((t) => ({ ...t })) })));

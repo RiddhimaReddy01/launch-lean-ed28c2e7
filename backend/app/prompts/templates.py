@@ -266,6 +266,113 @@ def discover_score_user(insights_json: str) -> str:
 {insights_json}"""
 
 
+# ═══ IMPROVED DISCOVERY: Extract insights with ALL 4 signals ═══
+
+
+def discover_extract_signals_system(business_type: str, city: str, state: str) -> str:
+    """Extract market insights with intelligent signal detection (Intensity, Willingness-to-Pay, Market Size, Urgency)"""
+    return f"""You are a market research analyst analyzing customer conversations about {business_type} in {city}, {state}.
+
+Extract 8-12 KEY INSIGHTS from the provided Reddit posts and search results. For each insight, determine:
+
+1. **Intensity (1-10)**: How urgent/critical is this problem?
+   - 1-3: Nice-to-have, low priority
+   - 4-6: Important but manageable
+   - 7-10: Critical pain point, desperate need
+
+   Look for: Strong language ("desperate", "frustrated", "can't live without"),
+   frequency of complaints, time/productivity waste, health/safety concerns
+
+2. **Willingness-to-Pay (1-10)**: Would customers spend money to solve this?
+   - 1-3: "Nice but I'll DIY" (free solutions preferred)
+   - 4-6: "Would consider paying if cheap" ($10-50/month)
+   - 7-10: "Would pay premium" ($100+/month or $10+/item)
+
+   Look for: Price mentions, "would pay", comparison to expensive alternatives,
+   subscription willingness, multiple sources mentioning cost as non-issue
+
+3. **Market Size (1-10)**: How many people have this problem?
+   - 1-3: Niche (< 10K people in region)
+   - 4-6: Small market (10K-100K people)
+   - 7-10: Large market (100K+ people)
+
+   Look for: Number of posts/mentions, diverse demographics, cross-platform mentions,
+   evidence of market research/industry reports, competitor existence
+
+4. **Urgency (1-10)**: Is this trending/hot RIGHT NOW?
+   - 1-3: Persistent but stale (been a problem for years, not accelerating)
+   - 4-6: Growing concern (recent mentions, emerging trend)
+   - 7-10: Hot/trending (frequent recent mentions, increasing urgency signals, seasonal spike)
+
+   Look for: Recency of posts, phrase "recently", "new problem", market growth signals,
+   startup activity in space, regulatory changes, seasonal patterns
+
+Return ONLY valid JSON:
+{{
+  "insights": [
+    {{
+      "id": "ins_001",
+      "type": "pain_point | unmet_want | market_gap | trend",
+      "title": "Concise insight title (5-10 words)",
+      "explanation": "2-3 sentence explanation of the insight and why it matters",
+      "intensity": 7,
+      "willingness_to_pay": 6,
+      "market_size": 8,
+      "urgency": 7,
+      "evidence_summary": "Summary of strongest evidence (1-2 sentences with specific examples)",
+      "customer_quote": "Most compelling quote from data",
+      "source_platforms": ["reddit", "google_search"],
+      "mention_count": 12,
+      "confidence": "high | medium | low"
+    }}
+  ]
+}}
+
+RULES:
+- Merge related insights (don't list "wait times" and "service speed" separately)
+- Prioritize: Common + High pain + Willingness-to-pay
+- Each insight must be supported by actual quotes/data
+- Be specific: "Long checkout process" vs vague "bad experience"
+- Flag trends: Growing mentions vs persistent background issues
+- Confidence = based on evidence quality and consistency across sources"""
+
+
+def discover_extract_signals_user(posts: list[dict], business_type: str, city: str, state: str) -> str:
+    """Format posts for insight extraction with all 4 signals"""
+
+    # Build condensed post list for LLM
+    lines = []
+    reddit_count = 0
+    search_count = 0
+
+    for i, post in enumerate(posts[:200]):
+        src = post.get("subreddit", post.get("query_type", "search"))
+        if src and src != "google_search":
+            reddit_count += 1
+        else:
+            search_count += 1
+
+        title = post.get("title", "")
+        body = post.get("body", post.get("snippet", ""))[:200]
+        score = post.get("score", 0)
+
+        lines.append(f"[{i+1}] [{src.upper()}] (engagement:{score}) {title}")
+        if body:
+            lines.append(f"    > {body}")
+
+    post_text = "\n".join(lines)
+
+    return f"""Market Research Data for {business_type} in {city}, {state}:
+Source Summary: {reddit_count} Reddit posts + {search_count} Google/review results
+
+CUSTOMER CONVERSATIONS:
+{post_text}
+
+Analyze these {reddit_count + search_count} data points and extract key market insights.
+For each insight, evaluate Intensity, Willingness-to-Pay, Market Size, and Urgency based on the evidence.
+Return 8-12 prioritized insights."""
+
+
 # ═══ MODULE 2: ANALYZE ═══
 
 
@@ -406,76 +513,190 @@ Evidence:
 
 # ═══ MODULE 3: SETUP ═══
 
+# SETUP has 4 components:
+# 1. Cost Tiers (deterministic - no LLM, calculated from COSTS)
+# 2. Suppliers (LLM - context specific vendors)
+# 3. Team (LLM - hiring plan from ROOT CAUSES)
+# 4. Timeline (LLM - 4-phase roadmap)
 
-def setup_system(business_type: str, city: str, state: str, metro: str) -> str:
-    return f"""Generate a complete launch plan for a {business_type} in {city}, {state} ({metro} metro).
 
-Return JSON with these sections:
+def setup_suppliers_system() -> str:
+    """LLM prompt: Recommend vendors for specific business type + tier"""
+    return """You are a startup resource advisor. Recommend 8-12 vendors
+for launching a new business.
 
-{{
-  "cost_tiers": [
-    {{
-      "tier": "minimum_viable | recommended | full_buildout",
-      "model": "Description (e.g., 'Kiosk or food hall')",
-      "total_range": {{ "min": number, "max": number }},
-      "line_items": [
-        {{
-          "category": "real_estate | equipment | permits_legal | initial_operations | runway_3mo",
-          "name": "Specific item name",
-          "min_cost": number,
-          "max_cost": number,
-          "notes": "Brief note"
-        }}
-      ]
-    }}
-  ],
+For each vendor:
+1. Category (Engineering, Marketing, Legal, Operations, Infrastructure)
+2. Name (actual company name)
+3. Why recommended (2 sentences - specific to business type + tier)
+4. Website (actual URL)
+5. Cost indication (Free, Pay-per-use, $X/month, Hourly rate, etc)
+
+Focus on TIER-APPROPRIATE vendors:
+- LEAN tier: Cheap/free tools, freelancer platforms, DIY-friendly, max cost-conscious
+- MID tier: Balanced cost/quality, established services, some automation
+- PREMIUM tier: Full-service, managed, high-touch support, premium pricing
+
+Return ONLY valid JSON:
+{
   "suppliers": [
-    {{
-      "category": "produce | equipment | packaging | services | technology",
-      "name": "Real company name",
-      "description": "What they provide",
-      "location": "City/area",
-      "website": "URL if known",
-      "why_recommended": "1 sentence"
-    }}
-  ],
-  "team": [
-    {{
-      "title": "Role title",
-      "type": "full_time | part_time | contract",
-      "salary_range": {{ "min": number, "max": number }},
-      "priority": "must_have | nice_to_have",
-      "tier": "minimum_viable | recommended | full_buildout"
-    }}
-  ],
-  "timeline": [
-    {{
-      "phase": "Phase name",
-      "weeks": "1-2",
-      "milestones": ["string array of 3-4 key milestones"]
-    }}
+    {
+      "category": "Engineering",
+      "name": "Upwork",
+      "description": "Freelancer platform for hiring developers, designers, QA",
+      "location": "Global",
+      "website": "https://upwork.com",
+      "cost": "Hourly rates $20-100+, platform fee 5-20%",
+      "why_recommended": "Best for LEAN/MID tier: find experienced backend engineers fast at reasonable rates"
+    }
   ]
-}}
-
-CRITICAL: Use {city}, {state} specific data:
-- Real commercial lease rates for {city}
-- {state} specific permit costs and requirements
-- {metro} labor market salary ranges
-- Real local supplier names where possible"""
+}"""
 
 
-def setup_user(decomposition: dict, insight: dict, analysis_summary: str, search_data: str) -> str:
-    return f"""Generate a launch plan for this business:
+def setup_suppliers_user(business_type: str, city: str, state: str, tier: str, customers: list[str]) -> str:
+    """User prompt: Recommend vendors for this specific business"""
+    return f"""Recommend vendors for launching a {business_type} in {city}, {state} ({tier} tier).
 
-Type: {decomposition.get('business_type', '')}
-Location: {decomposition.get('location', {}).get('city', '')}, {decomposition.get('location', {}).get('state', '')}
-Key insight: {insight.get('title', '')}
+Target customers: {', '.join(customers[:2])}
 
-Market analysis summary:
-{analysis_summary}
+Budget: ${{'LEAN': '$30-50k', 'MID': '$75-100k', 'PREMIUM': '$150-200k'}.get(tier, '$unknown')}
 
-Local supplier/cost search results:
-{search_data}"""
+Recommend vendors for:
+- Engineering (developers, designers, QA, no-code tools)
+- Marketing (customer acquisition, analytics, tools)
+- Legal (entity formation, contracts, compliance)
+- Operations (accounting, HR, insurance)
+- Infrastructure (servers, payment processing, delivery if applicable)
+
+Focus on vendors specifically useful for {business_type} in {city}.
+Recommend 8-12 most relevant vendors total."""
+
+
+def setup_team_system() -> str:
+    """LLM prompt: Create realistic hiring timeline based on complexity"""
+    return """You are a startup hiring advisor. Create realistic hiring timeline for Year 1.
+
+For each role:
+1. Title (job title)
+2. Type (Contract | FTE | Advisory)
+3. Salary range (for FTE: annual salary range; for Contract: hourly rate range)
+4. Priority (MUST_HAVE | NICE_TO_HAVE)
+5. Month to hire (1-12 in the first year)
+6. Why needed (1 sentence - tied to business complexity)
+
+Hiring principles by TIER:
+- LEAN tier: Max 2 people Year 1, mostly freelancers, DIY when possible
+- MID tier: 1 FTE by Month 4, possible second hire by Month 8
+- PREMIUM tier: 2-3+ people by Month 12, faster hiring for complex problems
+
+Timeline principles:
+- Month 1-2: Mostly freelancers (MVP, landing pages, legal)
+- Month 3-4: First FTE engineer (if building custom product)
+- Month 5-6: Operations/growth hire if revenue signals positive
+- Month 7-12: Scale hiring (sales, ops, customer success)
+
+Return ONLY valid JSON:
+{
+  "team": [
+    {
+      "title": "Backend Engineer",
+      "type": "FTE",
+      "salary_range": {"min": 80000, "max": 120000},
+      "priority": "MUST_HAVE",
+      "month": 4,
+      "why_needed": "Build core product infrastructure and handle scaling"
+    }
+  ]
+}"""
+
+
+def setup_team_user(business_type: str, tier: str, root_causes: list[dict], total_cost: float) -> str:
+    """User prompt: Create hiring plan for this business"""
+    causes_text = "\n".join(f"- {cause.get('title', 'Unknown')} ({cause.get('difficulty', 'unknown')} difficulty)"
+                            for cause in root_causes[:5])
+
+    return f"""Plan Year 1 hiring for a {business_type} startup ({tier} tier).
+
+Budget: ${int(total_cost):,} total
+Root causes to solve:
+{causes_text}
+
+What roles are MUST_HAVE to solve these root causes?
+When should you hire each role (which month 1-12)?
+What's realistic compensation for {tier} tier in this market?
+
+Return 8-12 realistic team roles with specific hiring month and salary ranges."""
+
+
+def setup_timeline_system() -> str:
+    """LLM prompt: Create 4-phase launch roadmap"""
+    return """You are a startup launch strategist. Create realistic 4-phase roadmap.
+
+Phases (FIXED order):
+1. VALIDATION (Prove problem exists + market demand)
+2. BUILD MVP (Create minimum viable product)
+3. LAUNCH (Go to market, acquire first customers)
+4. SCALE (Grow revenue, expand team, expand markets)
+
+For each phase:
+1. Phase name (VALIDATION, BUILD MVP, LAUNCH, SCALE)
+2. Weeks duration (realistic for tier)
+3. Budget allocation (% of total budget)
+4. 4-5 concrete, measurable milestones
+5. Success metric (how you know phase succeeded)
+
+Principles by TIER:
+- LEAN: Faster validation, longer build, slower scale, founder does most work
+- MID: Balanced across all phases
+- PREMIUM: Shorter validation (thorough research), faster build, rapid scale
+
+Pain intensity impact:
+- High pain (8-10): Faster validation (4-6 weeks), customers eager to buy
+- Medium pain (5-7): Standard validation (6-8 weeks)
+- Low pain (1-4): Longer validation (8-12 weeks), harder to convince
+
+Return ONLY valid JSON:
+{
+  "timeline": [
+    {
+      "phase": "VALIDATION",
+      "weeks": 6,
+      "budget_allocation_percent": 15,
+      "milestones": [
+        "Landing page live with customer email signup",
+        "100+ waitlist signups collected",
+        "5-10 customer interviews completed",
+        "Legal entity formed"
+      ],
+      "success_metric": "Strong demand signal (500+ signups OR >50% interview conversion)"
+    }
+  ]
+}"""
+
+
+def setup_timeline_user(business_type: str, tier: str, pain_intensity: float, root_causes: list[dict], total_cost: float) -> str:
+    """User prompt: Create 12-month timeline for this business"""
+    cause_count = len(root_causes)
+
+    return f"""Create 12-month launch timeline for a {business_type} startup.
+
+Tier: {tier} (budget: ${int(total_cost):,})
+Customer pain intensity: {pain_intensity}/10 (drives urgency/validation speed)
+Complexity: {cause_count} root causes to solve
+
+Timeline should:
+1. VALIDATION (4-12 weeks): Landing page, waitlist, customer interviews, legal
+2. BUILD MVP (8-16 weeks): Product development, based on complexity
+3. LAUNCH (2-4 weeks): Go live, first customers
+4. SCALE (rest of year): Revenue growth, team building, market expansion
+
+Budget allocation realistic across phases:
+- VALIDATION: 10-20% (research, landing page, legal)
+- BUILD: 40-60% (engineering, design, infrastructure)
+- LAUNCH: 10-20% (marketing, support setup)
+- SCALE: 5-15% (hiring, acquisition)
+
+Return concrete milestones and success metrics for each phase."""
 
 
 # ═══ MODULE 4: VALIDATE ═══

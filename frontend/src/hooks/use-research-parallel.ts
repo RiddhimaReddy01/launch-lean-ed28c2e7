@@ -35,9 +35,6 @@ interface ParallelState {
   progress: {
     decompose: boolean;
     discover: boolean;
-    analyze: boolean;
-    setup: boolean;
-    validate: boolean;
   };
 }
 
@@ -59,10 +56,7 @@ export function useResearchParallel(idea: string) {
     error: null,
     progress: {
       decompose: false,
-      discover: false,
-      analyze: false,
-      setup: false,
-      validate: false
+      discover: false
     }
   });
 
@@ -87,51 +81,27 @@ export function useResearchParallel(idea: string) {
           progress: { ...prev.progress, decompose: true }
         }));
 
-        // Step 2: Run all others in parallel (they depend on decompose)
-        const [discover, analyze, setup, validate] = await Promise.all([
-          discoverInsights(decompose).catch(e => {
-            console.error('Discover error:', e);
-            return null;
-          }),
-          analyzeSection('opportunity', null, decompose, undefined).catch(e => {
-            console.error('Analyze error:', e);
-            return null;
-          }),
-          generateSetup(null, decompose, undefined).catch(e => {
-            console.error('Setup error:', e);
-            return null;
-          }),
-          generateValidation(null, decompose, undefined, undefined).catch(e => {
-            console.error('Validate error:', e);
-            return null;
-          })
-        ]);
+        // Step 2: Only Discover - doesn't need insight selected
+        // Analyze, Setup, Validate require selectedInsight - they're fetched via useAnalyzeSection, useSetupPlan, useValidationPlan
+        const discover = await discoverInsights(decompose).catch(e => {
+          console.error('Discover error:', e);
+          return null;
+        });
 
         if (!isMounted) return;
-
-        // Store results
-        if (analyze) {
-          storeAnalysis('opportunity', analyze.data);
-        }
-        if (setup) {
-          storeSetup(setup as unknown as Record<string, unknown>);
-        }
 
         setState(prev => ({
           ...prev,
           allResults: {
             decompose,
             discover: discover as DiscoverResponse | null,
-            analyze: analyze as AnalyzeResponse | null,
-            setup: setup as SetupResponse | null,
-            validate: validate as ValidateResponse | null
+            analyze: null,  // Fetched after insight is selected
+            setup: null,    // Fetched after insight is selected
+            validate: null  // Fetched after insight is selected
           },
           progress: {
             decompose: true,
-            discover: !!discover,
-            analyze: !!analyze,
-            setup: !!setup,
-            validate: !!validate
+            discover: !!discover
           },
           isLoading: false
         }));

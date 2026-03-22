@@ -60,7 +60,7 @@ export function useAnalyzeSection(section: string) {
   return query;
 }
 
-export function useSetupPlan() {
+export function useSetupPlan(selectedTier: string = 'MID') {
   const { idea, decomposeQuery } = useResearchCore();
   const { selectedInsight, storeSetup, pipeline } = useIdea();
 
@@ -68,13 +68,19 @@ export function useSetupPlan() {
     ? pipeline.analysisContext
     : undefined;
 
+  const priorCtx = Object.keys(pipeline.analysisContext).length > 0
+    ? pipeline.analysisContext
+    : undefined;
+
   const query = useQuery<SetupResponse>({
-    queryKey: ['setup', idea, selectedInsight?.id],
+    queryKey: ['setup', idea, selectedInsight?.id, selectedTier],
     queryFn: () =>
       generateSetup(
         selectedInsight?.raw || selectedInsight,
         decomposeQuery.data,
         analysisCtx,
+        selectedTier,
+        priorCtx,
       ),
     enabled: Boolean(idea && decomposeQuery.data && selectedInsight),
     staleTime: 1000 * 60 * 5,

@@ -119,8 +119,14 @@ export const MOCK_COMMUNITIES: CommunityChannel[] = [
 ];
 
 export const MOCK_METRICS: MetricTarget[] = [
-  { id: 'signups', label: 'Waitlist signups', target: 150, targetLabel: '150+', unit: 'people', actual: 0 },
-  { id: 'surveys', label: 'Survey completions', target: 50, targetLabel: '50+', unit: 'responses', actual: 0 },
+  { id: 'signups', label: 'Waitlist signups', target: 50, targetLabel: '50+', unit: 'people', actual: 0 },
+  { id: 'surveys', label: 'Survey completions', target: 10, targetLabel: '10+', unit: 'responses', actual: 0 },
   { id: 'switch', label: '"Would switch" rate', target: 60, targetLabel: '60%+', unit: '%', actual: 0 },
-  { id: 'price', label: 'Avg price tolerance', target: 8, targetLabel: '≥ $8', unit: '$', actual: 0 },
+  { id: 'price', label: 'Avg price tolerance', target: 12, targetLabel: '≥ $12', unit: '$', actual: 0 },
+  { id: 'engagement', label: 'Community engagement', target: 20, targetLabel: '20+', unit: 'interactions', actual: 0 },
+  { id: 'reddit', label: 'Reddit upvotes', target: 10, targetLabel: '10+', unit: 'upvotes', actual: 0 },
+  // Revenue validation
+  { id: 'paid_signups', label: 'Paid signups', target: 5, targetLabel: '5+', unit: 'customers', actual: 0 },
+  { id: 'revenue', label: 'Revenue collected', target: 100, targetLabel: '$100+', unit: '$', actual: 0 },
+  { id: 'ad_spend', label: 'Ad spend', target: 50, targetLabel: '$50', unit: '$', actual: 0 },
 ];
