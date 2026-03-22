@@ -4,7 +4,7 @@ Enables persistence and multi-user benefit of cached insights.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from supabase import create_client
 
@@ -43,7 +43,7 @@ async def get_cached_decompose(idea: str) -> Optional[DecomposeResponse]:
 
         # Check expiration
         expires_at = datetime.fromisoformat(result.data["expires_at"])
-        if datetime.utcnow() > expires_at:
+        if datetime.now(timezone.utc) > expires_at:
             await delete_decompose_cache(idea)
             return None
 
@@ -75,8 +75,8 @@ async def cache_decompose(idea: str, response: DecomposeResponse, ttl_hours: int
                 "idea_hash": _hash_idea(idea),
                 "idea": idea,
                 "result": response.model_dump(),
-                "created_at": datetime.utcnow().isoformat(),
-                "expires_at": (datetime.utcnow() + timedelta(hours=ttl_hours)).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=ttl_hours)).isoformat(),
             }
         ).execute()
         logger.debug(f"Cached decompose result for idea")
@@ -123,7 +123,7 @@ async def get_cached_discover(
 
         # Check expiration
         expires_at = datetime.fromisoformat(result.data["expires_at"])
-        if datetime.utcnow() > expires_at:
+        if datetime.now(timezone.utc) > expires_at:
             await delete_discover_cache(business_type, city, state)
             return None
 
@@ -155,8 +155,8 @@ async def cache_discover(
                 "state": (state.lower() or None),
                 "sources": [s.model_dump() for s in response.sources],
                 "insights": [i.model_dump() for i in response.insights],
-                "created_at": datetime.utcnow().isoformat(),
-                "expires_at": (datetime.utcnow() + timedelta(hours=ttl_hours)).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=ttl_hours)).isoformat(),
             }
         ).execute()
         logger.debug(f"Cached discover results for {business_type}")
@@ -210,7 +210,7 @@ async def get_cached_search(
 
         # Check expiration
         expires_at = datetime.fromisoformat(result.data["expires_at"])
-        if datetime.utcnow() > expires_at:
+        if datetime.now(timezone.utc) > expires_at:
             await delete_search_cache(query_hash)
             return None
 
@@ -237,8 +237,8 @@ async def cache_search_results(
             {
                 "query_hash": query_hash,
                 "results": results,
-                "created_at": datetime.utcnow().isoformat(),
-                "expires_at": (datetime.utcnow() + timedelta(days=ttl_days)).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(days=ttl_days)).isoformat(),
             }
         ).execute()
         logger.debug(f"Cached {len(results)} search results")

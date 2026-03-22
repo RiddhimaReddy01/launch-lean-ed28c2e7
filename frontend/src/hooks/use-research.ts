@@ -96,7 +96,7 @@ export function useSetupPlan(selectedTier: string = 'MID') {
   return query;
 }
 
-export function useValidationPlan() {
+export function useValidationPlan(channels?: string[]) {
   const { idea, decomposeQuery } = useResearchCore();
   const { selectedInsight, pipeline } = useIdea();
 
@@ -105,13 +105,14 @@ export function useValidationPlan() {
     : undefined;
 
   return useQuery<ValidateResponse>({
-    queryKey: ['validate', idea, selectedInsight?.id],
+    queryKey: ['validate', idea, selectedInsight?.id, channels],
     queryFn: () =>
       generateValidation(
         selectedInsight?.raw || selectedInsight,
         decomposeQuery.data,
         analysisCtx,
         pipeline.setupContext || undefined,
+        channels,
       ),
     enabled: Boolean(idea && decomposeQuery.data && selectedInsight),
     staleTime: 1000 * 60 * 5,

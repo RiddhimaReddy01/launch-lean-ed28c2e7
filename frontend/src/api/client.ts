@@ -6,7 +6,7 @@
 import { queryClient } from '@/App';
 
 const rawUrl = import.meta.env.VITE_API_URL || '';
-const API_BASE = rawUrl.replace(/^VITE_API_URL=/i, '').trim().replace(/\/+$/, '');
+export const API_BASE = rawUrl.trim().replace(/\/+$/, '');
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '90000', 10);
 
 export class APIError extends Error {

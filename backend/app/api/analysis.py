@@ -9,21 +9,16 @@ POST /api/analyze-customer-acquisition - Customer Acquisition Strategy
 import logging
 import re
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from supabase import create_client
 
 from app.core.config import settings
 from app.core.auth import optional_user, get_current_user
+from app.core.supabase import get_supabase
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def get_supabase():
-    """Get Supabase client."""
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
 
 def cache_analysis(user_id: str, idea_id: str, analysis_type: str, result: dict, assumptions: dict):
@@ -32,7 +27,7 @@ def cache_analysis(user_id: str, idea_id: str, analysis_type: str, result: dict,
         supabase = get_supabase()
         update_data = {
             analysis_type: result,
-            f"{analysis_type}_calculated_at": datetime.utcnow().isoformat(),
+            f"{analysis_type}_calculated_at": datetime.now(timezone.utc).isoformat(),
             f"{analysis_type}_assumptions": assumptions,
         }
 
@@ -201,7 +196,7 @@ async def assess_risks(
         risks=risks,
         top_3_risks=risks[:3],
         cached=False,
-        calculated_at=datetime.utcnow().isoformat() if req.idea_id else None,
+        calculated_at=datetime.now(timezone.utc).isoformat() if req.idea_id else None,
     )
 
     # Cache result if idea_id provided and user authenticated
@@ -210,7 +205,7 @@ async def assess_risks(
             user["id"],
             req.idea_id,
             "risks",
-            response.dict(),
+            response.model_dump(),
             {"decomposition_provided": True, "analyze_provided": True}
         )
         response.cached = True
@@ -336,16 +331,17 @@ async def analyze_pricing(
             "expected_monthly_revenue_at_100_customers": standard_price * 100,
         })
 
-        # Premium tier: highest segment
-        premium_price = market_segments[0]["recommended_price"]
+        # Premium tier: highest segment (safe because we're in >= 2 check)
+        if market_segments:  # Extra safety check
+            premium_price = market_segments[0]["recommended_price"]
 
-        recommended_tiers.append({
-            "tier": "Premium",
-            "price": premium_price,
-            "target_segment": market_segments[0].get("segment", "Premium"),
-            "features": "Core + premium add-ons",
-            "expected_monthly_revenue_at_100_customers": premium_price * 100,
-        })
+            recommended_tiers.append({
+                "tier": "Premium",
+                "price": premium_price,
+                "target_segment": market_segments[0].get("segment", "Premium"),
+                "features": "Core + premium add-ons",
+                "expected_monthly_revenue_at_100_customers": premium_price * 100,
+            })
 
     # Revenue impact scenarios
     revenue_impact = {}
@@ -362,7 +358,7 @@ async def analyze_pricing(
         recommended_tiers=recommended_tiers,
         revenue_impact=revenue_impact,
         cached=False,
-        calculated_at=datetime.utcnow().isoformat() if req.idea_id else None,
+        calculated_at=datetime.now(timezone.utc).isoformat() if req.idea_id else None,
     )
 
     # Cache result if idea_id provided and user authenticated
@@ -371,7 +367,7 @@ async def analyze_pricing(
             user["id"],
             req.idea_id,
             "pricing",
-            response.dict(),
+            response.model_dump(),
             {"segments_analyzed": len(market_segments)}
         )
         response.cached = True
@@ -558,7 +554,7 @@ async def project_financials(
         year_3=year_3,
         breakeven_analysis=breakeven,
         cached=False,
-        calculated_at=datetime.utcnow().isoformat() if req.idea_id else None,
+        calculated_at=datetime.now(timezone.utc).isoformat() if req.idea_id else None,
     )
 
     # Cache result if idea_id provided and user authenticated
@@ -567,7 +563,7 @@ async def project_financials(
             user["id"],
             req.idea_id,
             "financials",
-            response.dict(),
+            response.model_dump(),
             {
                 "customer_acquisition_rate": acq_rate,
                 "average_revenue_per_customer": arpu,
@@ -774,7 +770,7 @@ async def analyze_acquisition(
         phase_1_strategy=phase_1,
         phase_2_strategy=phase_2,
         cached=False,
-        calculated_at=datetime.utcnow().isoformat() if req.idea_id else None,
+        calculated_at=datetime.now(timezone.utc).isoformat() if req.idea_id else None,
     )
 
     # Cache result if idea_id provided and user authenticated
@@ -783,7 +779,7 @@ async def analyze_acquisition(
             user["id"],
             req.idea_id,
             "acquisition",
-            response.dict(),
+            response.model_dump(),
             {
                 "business_type": business_type,
                 "location": city,

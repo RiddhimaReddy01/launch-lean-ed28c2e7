@@ -102,9 +102,11 @@ def _post_process(scored_data: dict, sources: list[dict]) -> DiscoverResponse:
         evidence_list = []
         customer_quote = raw.get("customer_quote", "")
         if customer_quote:
+            source_platforms = raw.get("source_platforms", [])
+            source = source_platforms[0] if source_platforms else "research"
             evidence_list.append(Evidence(
                 quote=customer_quote,
-                source=raw.get("source_platforms", ["research"])[0] if raw.get("source_platforms") else "research",
+                source=source,
                 source_url="",
                 score=0,
                 upvotes=None,

@@ -227,12 +227,31 @@ def _post_process(raw: dict, channels: list[str]) -> ValidateResponse:
         ))
 
     # ── Scorecard ──
+    def _extract_number(value, default, as_int=False):
+        """Extract number from string or value (LLM may return 'Above $45...')"""
+        if not value:
+            return default
+        try:
+            if isinstance(value, str):
+                # Extract first number from string
+                import re
+                match = re.search(r'(\d+\.?\d*)', value)
+                num = float(match.group(1)) if match else default
+            else:
+                num = float(value)
+            return int(num) if as_int else num
+        except (ValueError, AttributeError):
+            return default
+
     sc = raw.get("scorecard", {})
     scorecard = Scorecard(
-        waitlist_target=sc.get("waitlist_target", 150),
-        survey_target=sc.get("survey_target", 50),
-        switch_pct_target=sc.get("switch_pct_target", 60),
-        price_tolerance_target=sc.get("price_tolerance_target", ""),
+        waitlist_target=_extract_number(sc.get("waitlist_target"), 50, as_int=True),
+        survey_target=_extract_number(sc.get("survey_target"), 10, as_int=True),
+        switch_pct_target=_extract_number(sc.get("switch_pct_target"), 60, as_int=True),
+        price_tolerance_target=_extract_number(sc.get("price_tolerance_target"), 12.0),
+        paid_signups_target=_extract_number(sc.get("paid_signups_target"), 5, as_int=True),
+        ltv_cac_ratio_target=_extract_number(sc.get("ltv_cac_ratio_target"), 3.0),
+        is_custom=bool(sc.get("is_custom", False)),
     )
 
     return ValidateResponse(

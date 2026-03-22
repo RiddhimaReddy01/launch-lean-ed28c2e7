@@ -39,7 +39,6 @@ export default function IdeaDetail() {
       toast({ title: 'Saved!', description: 'Your changes have been saved.' });
       ideaQuery.refetch();
       setEditingNotes(false);
-      setEditingTags(false);
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

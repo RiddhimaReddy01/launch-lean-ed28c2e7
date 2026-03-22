@@ -3,7 +3,7 @@
  * CRUD operations and advanced analysis caching
  */
 
-import { request } from './client';
+import { request, API_BASE } from './client';
 
 /**
  * Idea data models (matching backend Pydantic schemas)
@@ -268,10 +268,13 @@ export async function getAcquisition(ideaId: string): Promise<AcquisitionAnalysi
  * Note: Uses raw fetch because response is a blob, not JSON
  */
 export async function exportIdea(ideaId: string): Promise<Blob> {
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://launch-lean-backend.onrender.com';
   const token = localStorage.getItem('auth_token');
 
-  const res = await fetch(`${baseUrl}/api/ideas/${ideaId}/export/pdf`, {
+  if (!API_BASE) {
+    throw new Error('Missing API URL configuration. Set VITE_API_URL in environment.');
+  }
+
+  const res = await fetch(`${API_BASE}/api/ideas/${ideaId}/export/pdf`, {
     method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });

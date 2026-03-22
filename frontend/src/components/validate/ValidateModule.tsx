@@ -56,7 +56,7 @@ export default function ValidateModule() {
     .map((method) => METHOD_TO_CHANNEL[method] ?? null)
     .filter((channel): channel is string => channel !== null);
 
-  const validationQuery = useValidationPlan(undefined, undefined, channels.length > 0 ? channels : undefined);
+  const validationQuery = useValidationPlan(channels.length > 0 ? channels : undefined);
 
   // Handle save experiment
   const handleSaveExperiment = async () => {

@@ -1,0 +1,105 @@
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+openrouter rate limited: Groq rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+Stage 1 failed (AllProvidersExhaustedError), fallback extraction
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+openrouter rate limited: Groq rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+Stage 2 failed (AllProvidersExhaustedError), using defaults
+Reddit search returned 403
+gemini rate limited: Gemini rate limit hit
+groq rate limited: Groq rate limit hit
+openrouter rate limited: Groq rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+[DISCOVER] LLM extraction failed: All LLM providers failed. Last error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410. Falling back to keyword analysis.
+openrouter rate limited: Groq rate limit hit
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+[SETUP] No costs data provided, using defaults
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+openrouter rate limited: Groq rate limit hit
+[SETUP] Suppliers generation failed: All LLM providers failed. Last error: Groq rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+openrouter rate limited: Groq rate limit hit
+[SETUP] Team generation failed: All LLM providers failed. Last error: Groq rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+openrouter rate limited: Groq rate limit hit
+[SETUP] Timeline generation failed: All LLM providers failed. Last error: Groq rate limit hit
+groq rate limited: Groq rate limit hit
+gemini rate limited: Gemini rate limit hit
+openrouter rate limited: Groq rate limit hit
+huggingface error: Client error '410 Gone' for url 'https://api-inference.huggingface.co/v1/chat/completions?model=meta-llama/Llama-3.2-3B-Instruct'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410
+
+==========================================================================================
+  FULL 5-TAB PIPELINE TEST - Single Query
+==========================================================================================
+
+Idea: A sustainable meal prep delivery service for busy professionals in Austin Texas
+
+[TAB 1/5] DECOMPOSE
+------------------------------------------------------------
+OK - 29.2s
+  Business Type: A sustainable meal prep delivery service for busy professionals in Austin Texas
+FAILED - 'Location' object has no attribute 'get'
+
+[TAB 2/5] DISCOVER
+------------------------------------------------------------
+OK - 17.2s
+  Insights Found: 2
+    1. [pain_point] Customer concerns: location
+    2. [unmet_want] Customer concerns: service
+  Sources: 3
+  Cache: Search results stored
+
+[TAB 3/5] ANALYZE
+------------------------------------------------------------
+FAILED - 503: All LLM providers unavailable
+
+[TAB 4/5] SETUP
+------------------------------------------------------------
+OK - 35.9s
+  Tier: MID
+  Suppliers: 0
+  Timeline Phases: 0
+
+[TAB 5/5] VALIDATE
+------------------------------------------------------------
+FAILED - 503: All LLM providers unavailable
+
+==========================================================================================
+  SUMMARY
+==========================================================================================
+
+Completion: 2/5 tabs successful
+Total Time: 53.2s
+
+  [FAILED] DECOMPOSE
+  [OK] DISCOVER
+  [FAILED] ANALYZE
+  [OK] SETUP
+  [FAILED] VALIDATE
+
+Cache Status:
+  - Search results cached (DISCOVER)
+  - Future queries will be 30-50% faster
+
+==========================================================================================
+
