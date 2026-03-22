@@ -90,7 +90,8 @@ export default function AnalyzeModule() {
     if (el) requestAnimationFrame(() => el.classList.add('visible'));
   }, []);
 
-  const showSkeleton = !ready.has(activeTab);
+  const isQueryLoading = sizingQuery.isLoading || demandQuery.isLoading || competitorsQuery.isLoading || rootQuery.isLoading || costsQuery.isLoading;
+  const showSkeleton = !ready.has(activeTab) || isQueryLoading;
   const insightTitle = selectedInsight?.title || 'Select an insight to analyze';
   const insightScore = Math.round((selectedInsight as any)?.score || 0);
 
