@@ -145,9 +145,12 @@ def _post_process(scored_data: dict, sources: list[dict], note: str | None = Non
                 date=ev.get("date"),
             ))
 
-        # Calculate mention count from frequency
-        freq = raw.get("frequency", raw.get("frequency_score", 0))
-        mention_count = int(freq) if isinstance(freq, (int, float)) else 0
+        # Calculate mention count from frequency or mention_count
+        mention_count_raw = raw.get("mention_count", 0)
+        if not mention_count_raw:
+            freq = raw.get("frequency", raw.get("frequency_score", 0))
+            mention_count_raw = int(freq) if isinstance(freq, (int, float)) else 0
+        mention_count = int(mention_count_raw)
 
         insight = Insight(
             id=f"ins_{i+1:03d}",
