@@ -35,7 +35,7 @@ async def discover_insights(
     req: DiscoverRequest,
     user: dict | None = Depends(optional_user),
 ):
-    decomp = req.decomposition
+    decomp = req.decomposition.model_dump()
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")

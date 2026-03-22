@@ -4,6 +4,7 @@ Converts raw idea string → structured searchable components.
 Pipeline: Input validation → LLM extraction → Post-processing → Response
 """
 
+import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 import time
@@ -33,7 +34,7 @@ async def decompose_idea(
         raise HTTPException(status_code=400, detail="Idea must be at least 3 words")
 
     # Stage 2.5: Cache check
-    cached = _cache_get(idea)
+    cached = await _cache_get(idea)
     if cached:
         return cached
 
@@ -64,7 +65,7 @@ async def decompose_idea(
             logger.error(f"Fallback also failed: {fallback_err}")
             raise HTTPException(status_code=500, detail="Could not decompose idea")
 
-    _cache_set(idea, resp)
+    await _cache_set(idea, resp)
     return resp
 
 
@@ -92,9 +93,11 @@ def _post_process(raw: dict, defaults: list[str]) -> DecomposeResponse:
     # Ensure subreddits has 4-8 entries
     subreddits = raw.get("subreddits", [])
     if isinstance(subreddits, str):
-        subreddits = [s.strip() for s in subreddits.split(",")]
+        subreddits = [s.strip() for s in subreddits.split(",") if s.strip()]
+    elif not isinstance(subreddits, list):
+        subreddits = []
     # Strip r/ prefix if present
-    subreddits = [s.replace("r/", "").strip() for s in subreddits]
+    subreddits = [s.replace("r/", "").strip() for s in subreddits if isinstance(s, str)]
     # Pad with defaults if too few
     if len(subreddits) < 4 and location.city:
         defaults = [location.city.lower(), "smallbusiness", "Entrepreneur", "startups"]
@@ -105,11 +108,19 @@ def _post_process(raw: dict, defaults: list[str]) -> DecomposeResponse:
     # Ensure search_queries has 5-8 entries
     queries = raw.get("search_queries", [])
     if isinstance(queries, str):
-        queries = [queries]
+        queries = [queries] if queries.strip() else []
+    elif not isinstance(queries, list):
+        queries = []
+    # Filter to strings only
+    queries = [q for q in queries if isinstance(q, str) and q.strip()]
 
     source_domains = raw.get("source_domains", [])
     if isinstance(source_domains, str):
         source_domains = [d.strip() for d in source_domains.split(",") if d.strip()]
+    elif not isinstance(source_domains, list):
+        source_domains = []
+    # Filter to strings only
+    source_domains = [d for d in source_domains if isinstance(d, str) and d.strip()]
     if not source_domains:
         source_domains = defaults[:8] if defaults else default_domains[:8]
 
@@ -192,23 +203,26 @@ def _fallback_decompose(idea: str, vertical: str, defaults: list[str]) -> Decomp
     )
 
 
-# Simple in-memory TTL cache
+# Simple in-memory TTL cache with lock for thread-safety in async context
 _cache_store: dict[str, tuple[float, DecomposeResponse]] = {}
+_cache_lock = asyncio.Lock()
 
 
-def _cache_get(key: str) -> DecomposeResponse | None:
-    item = _cache_store.get(key)
-    if not item:
-        return None
-    expires_at, val = item
-    if time.time() > expires_at:
-        _cache_store.pop(key, None)
-        return None
-    return val
+async def _cache_get(key: str) -> DecomposeResponse | None:
+    async with _cache_lock:
+        item = _cache_store.get(key)
+        if not item:
+            return None
+        expires_at, val = item
+        if time.time() > expires_at:
+            _cache_store.pop(key, None)
+            return None
+        return val
 
 
-def _cache_set(key: str, val: DecomposeResponse) -> None:
-    _cache_store[key] = (time.time() + CACHE_TTL_SECONDS, val)
+async def _cache_set(key: str, val: DecomposeResponse) -> None:
+    async with _cache_lock:
+        _cache_store[key] = (time.time() + CACHE_TTL_SECONDS, val)
 
 
 def _normalize_state(state: str) -> str:

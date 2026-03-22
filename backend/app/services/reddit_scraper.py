@@ -27,6 +27,7 @@ TOP_LIMIT = 50
 HOT_LIMIT = 25
 MIN_POSTS_BEFORE_HOT = 30
 _token_cache: Optional[tuple[str, float]] = None  # (token, expires_at)
+_token_lock = asyncio.Lock()
 
 
 async def fetch_subreddit_posts(
@@ -125,34 +126,36 @@ async def fetch_search_posts(query: str, limit: int = 50, sort: str = "relevance
 
 
 async def _maybe_token() -> Optional[str]:
-    """Fetch OAuth token if creds exist; cache it."""
+    """Fetch OAuth token if creds exist; cache it with lock for thread-safety."""
     global _token_cache
     if not settings.REDDIT_CLIENT_ID or not settings.REDDIT_CLIENT_SECRET:
         return None
-    now = asyncio.get_event_loop().time()
-    if _token_cache and _token_cache[1] > now + 60:
-        return _token_cache[0]
-    creds = b64encode(f"{settings.REDDIT_CLIENT_ID}:{settings.REDDIT_CLIENT_SECRET}".encode()).decode()
-    headers = {
-        "Authorization": f"Basic {creds}",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": USER_AGENT,
-    }
-    data = "grant_type=client_credentials"
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post("https://www.reddit.com/api/v1/access_token", headers=headers, data=data, timeout=REQUEST_TIMEOUT)
-            if resp.status_code != 200:
-                logger.warning(f"Reddit token failed {resp.status_code}: {resp.text[:200]}")
-                return None
-            js = resp.json()
-            token = js.get("access_token")
-            expires_in = js.get("expires_in", 3600)
-            _token_cache = (token, now + expires_in)
-            return token
-    except (httpx.TimeoutException, httpx.HTTPError) as e:
-        logger.warning(f"Reddit token error: {e}")
-        return None
+
+    async with _token_lock:
+        now = asyncio.get_event_loop().time()
+        if _token_cache and _token_cache[1] > now + 60:
+            return _token_cache[0]
+        creds = b64encode(f"{settings.REDDIT_CLIENT_ID}:{settings.REDDIT_CLIENT_SECRET}".encode()).decode()
+        headers = {
+            "Authorization": f"Basic {creds}",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": USER_AGENT,
+        }
+        data = "grant_type=client_credentials"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post("https://www.reddit.com/api/v1/access_token", headers=headers, data=data, timeout=REQUEST_TIMEOUT)
+                if resp.status_code != 200:
+                    logger.warning(f"Reddit token failed {resp.status_code}: {resp.text[:200]}")
+                    return None
+                js = resp.json()
+                token = js.get("access_token")
+                expires_in = js.get("expires_in", 3600)
+                _token_cache = (token, now + expires_in)
+                return token
+        except (httpx.TimeoutException, httpx.HTTPError) as e:
+            logger.warning(f"Reddit token error: {e}")
+            return None
 
 
 def extract_post_fields(raw_post: dict) -> dict:

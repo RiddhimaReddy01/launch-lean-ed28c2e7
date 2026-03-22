@@ -33,8 +33,8 @@ async def analyze_section(
     if section not in VALID_SECTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid section: {section}. Must be one of: {VALID_SECTIONS}")
 
-    decomp = req.decomposition
-    insight = req.insight
+    decomp = req.decomposition.model_dump()
+    insight = req.insight.model_dump()
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")
@@ -92,10 +92,10 @@ async def _handle_opportunity(
     sam_val = _extract_value(raw, "sam")
     som_val = _extract_value(raw, "som")
 
-    if tam_val and sam_val and tam_val < sam_val:
+    if tam_val and sam_val and tam_val < sam_val and "tam" in raw and "sam" in raw:
         # Swap if LLM got confused
         raw["tam"], raw["sam"] = raw["sam"], raw["tam"]
-    if sam_val and som_val and sam_val < som_val:
+    if sam_val and som_val and sam_val < som_val and "sam" in raw and "som" in raw:
         raw["sam"], raw["som"] = raw["som"], raw["sam"]
 
     return raw

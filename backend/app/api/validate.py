@@ -27,8 +27,8 @@ async def generate_validation(
     req: ValidateRequest,
     user: dict | None = Depends(optional_user),
 ):
-    decomp = req.decomposition
-    insight = req.insight
+    decomp = req.decomposition.model_dump()
+    insight = req.insight.model_dump()
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")

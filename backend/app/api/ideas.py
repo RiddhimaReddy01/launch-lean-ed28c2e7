@@ -167,8 +167,8 @@ async def save_idea(
         )
 
     except Exception as e:
-        logger.error(f"Error saving idea: {e}")
-        raise HTTPException(status_code=500, detail=f"Error saving idea: {str(e)}")
+        logger.error(f"Error saving idea: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save idea")
 
 
 @router.get("/api/ideas", response_model=list[IdeaResponse])
@@ -221,8 +221,8 @@ async def list_ideas(
         return ideas
 
     except Exception as e:
-        logger.error(f"Error listing ideas: {e}")
-        raise HTTPException(status_code=500, detail=f"Error listing ideas: {str(e)}")
+        logger.error(f"Error listing ideas: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to list ideas")
 
 
 @router.get("/api/ideas/{idea_id}", response_model=IdeaDetailResponse)
@@ -271,11 +271,11 @@ async def get_idea(
             updated_at=idea["updated_at"],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error retrieving idea: {e}")
-        if "not found" in str(e).lower():
-            raise HTTPException(status_code=404, detail="Idea not found")
-        raise HTTPException(status_code=500, detail=f"Error retrieving idea: {str(e)}")
+        logger.error(f"Error retrieving idea: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve idea")
 
 
 @router.patch("/api/ideas/{idea_id}", response_model=IdeaDetailResponse)
@@ -338,9 +338,11 @@ async def update_idea(
             updated_at=idea["updated_at"],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error updating idea: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating idea: {str(e)}")
+        logger.error(f"Error updating idea: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update idea")
 
 
 @router.delete("/api/ideas/{idea_id}")
@@ -371,5 +373,5 @@ async def delete_idea(
         }
 
     except Exception as e:
-        logger.error(f"Error deleting idea: {e}")
-        raise HTTPException(status_code=500, detail=f"Error deleting idea: {str(e)}")
+        logger.error(f"Error deleting idea: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete idea")

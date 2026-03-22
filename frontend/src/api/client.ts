@@ -3,6 +3,8 @@
  * Base request function used by all API modules
  */
 
+import { queryClient } from '@/App';
+
 const rawUrl = import.meta.env.VITE_API_URL || '';
 const API_BASE = rawUrl.replace(/^VITE_API_URL=/i, '').trim().replace(/\/+$/, '');
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '90000', 10);
@@ -69,13 +71,22 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       // Handle auth errors
       if (res.status === 401) {
         localStorage.removeItem('auth_token');
+        queryClient.clear();
         window.location.href = '/auth';
       }
 
       throw new APIError(res.status, detail, `API error ${res.status}`);
     }
 
-    const data = await res.json() as T;
+    let data: T;
+    try {
+      data = await res.json() as T;
+    } catch (parseError) {
+      if (import.meta.env.DEV) {
+        console.error(`❌ JSON Parse Error: ${parseError}`);
+      }
+      throw new APIError(500, 'Invalid response from server', 'Failed to parse response');
+    }
 
     // Log success in development
     if (import.meta.env.DEV) {
