@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MOCK_METHODS, type ValidationMethod } from '@/test/__mocks__/validate';
+import { VALIDATION_METHODS } from '@/lib/research-ui-config';
+import type { ValidationMethod } from '@/types/research-ui';
 
 const EFFORT_COLORS: Record<string, string> = {
   low: '#2D8B75',
@@ -16,14 +17,15 @@ const SPEED_LABELS: Record<string, string> = {
 interface Props {
   selected: Set<string>;
   onToggle: (id: string) => void;
+  methods?: ValidationMethod[];
 }
 
-export default function MethodSelector({ selected, onToggle }: Props) {
+export default function MethodSelector({ selected, onToggle, methods = VALIDATION_METHODS }: Props) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-      {MOCK_METHODS.map((m) => {
+      {methods.map((m) => {
         const isSelected = selected.has(m.id);
         const isHovered = hoveredId === m.id;
 
@@ -47,26 +49,15 @@ export default function MethodSelector({ selected, onToggle }: Props) {
             }}
           >
             <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <span
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 15,
-                  fontWeight: 400,
-                  color: 'var(--text-primary)',
-                }}
-              >
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 400, color: 'var(--text-primary)' }}>
                 {m.name}
               </span>
               <div
                 style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 6,
+                  width: 20, height: 20, borderRadius: 6,
                   border: isSelected ? '2px solid var(--accent-purple)' : '2px solid var(--divider-light)',
                   backgroundColor: isSelected ? 'var(--accent-purple)' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all 200ms ease-out',
                 }}
               >
@@ -85,12 +76,9 @@ export default function MethodSelector({ selected, onToggle }: Props) {
             <div className="flex items-center" style={{ gap: 12 }}>
               <span
                 style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 12,
-                  fontWeight: 400,
+                  fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 400,
                   color: EFFORT_COLORS[m.effort],
-                  padding: '3px 8px',
-                  borderRadius: 6,
+                  padding: '3px 8px', borderRadius: 6,
                   backgroundColor: `${EFFORT_COLORS[m.effort]}10`,
                 }}
               >
