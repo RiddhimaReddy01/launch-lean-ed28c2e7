@@ -1,10 +1,22 @@
 import type { DiscoverResponse, DiscoverInsight, DiscoverSource, AnalyzeResponse, SetupResponse, ValidateResponse } from '@/types/api';
-import type { Insight, Source } from '@/test/__mocks__/discover';
 import type {
-  MarketSize, DemandBehaviorData, CustomerSegment,
-  Competitor, MarketStructureData, RootCause, StrategicSnapshotData, StartupCosts,
-} from '@/test/__mocks__/analyze';
-import type { LaunchTier, CostCategory, Supplier as UiSupplier, TeamRole as UiTeamRole, TimelinePhase as UiTimelinePhase } from '@/test/__mocks__/setup';
+  CommunityChannel,
+  Competitor,
+  CustomerSegment,
+  DemandBehaviorData,
+  Insight,
+  LaunchTier,
+  MarketSize,
+  MarketStructureData,
+  RootCause,
+  SetupCostCategory,
+  Source,
+  StartupCosts,
+  StrategicSnapshotData,
+  Supplier as UiSupplier,
+  TeamRole as UiTeamRole,
+  TimelinePhase as UiTimelinePhase,
+} from '@/types/research-ui';
 
 const slug = (val: string) => val.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -60,7 +72,6 @@ export function summarizeDiscover(insights: Insight[], sources: Source[]) {
   return { totalSources: sources.length, totalSignals };
 }
 
-// â€”â€” Analyze mappings â€”â€” //
 export function mapOpportunity(raw: AnalyzeResponse | undefined): MarketSize[] | undefined {
   if (!raw?.data) return undefined;
   const { tam, sam, som } = raw.data;
@@ -111,7 +122,7 @@ export function mapSegments(raw: AnalyzeResponse | undefined): CustomerSegment[]
     description: s.description,
     estimatedSize: s.estimated_size?.toString?.() || s.estimated_size || '',
     painIntensity: s.pain_intensity || 0,
-    caresMostAbout: s.cares_most_about || s.primary_need ? [s.primary_need] : [],
+    caresMostAbout: s.cares_most_about || (s.primary_need ? [s.primary_need] : []),
   }));
 }
 
@@ -179,11 +190,10 @@ export function mapCostsPreview(raw: AnalyzeResponse | undefined): StartupCosts 
   };
 }
 
-// â€”â€” Setup mappings â€”â€” //
-export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTier[]; costs: Record<string, CostCategory[]> } | undefined {
+export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTier[]; costs: Record<string, SetupCostCategory[]> } | undefined {
   if (!raw) return undefined;
   const tiers: LaunchTier[] = raw.cost_tiers.map((t, idx) => ({
-    id: (['minimum', 'recommended', 'full'] as LaunchTier['id'][])[idx] || 'recommended',
+    id: (['minimum', 'recommended', 'full'] as const)[idx] || 'recommended',
     title: t.tier?.replace(/_/g, ' ') || 'Tier',
     model: t.model || '',
     costRange: t.total_range ? `$${Math.round(t.total_range.min).toLocaleString()} – $${Math.round(t.total_range.max).toLocaleString()}` : '',
@@ -191,7 +201,7 @@ export function mapSetupTiers(raw: SetupResponse | undefined): { tiers: LaunchTi
     costMax: t.total_range?.max || 0,
     whenToChoose: t.notes || 'Use when the economics fit your risk tolerance.',
   }));
-  const costs: Record<string, CostCategory[]> = {};
+  const costs: Record<string, SetupCostCategory[]> = {};
   raw.cost_tiers.forEach((t, idx) => {
     const key = (['minimum', 'recommended', 'full'] as const)[idx] || 'recommended';
     costs[key] = (t.line_items || []).map((li: any) => ({
@@ -257,8 +267,7 @@ export function mapSetupTimeline(raw: SetupResponse | undefined): UiTimelinePhas
   }));
 }
 
-// â€”â€” Validate mappings â€”â€” //
-export function mapValidateCommunities(raw: ValidateResponse | undefined) {
+export function mapValidateCommunities(raw: ValidateResponse | undefined): CommunityChannel[] | undefined {
   return raw?.communities?.map((c) => ({
     id: c.name.toLowerCase().replace(/\s+/g, '-'),
     name: c.name,
@@ -266,6 +275,6 @@ export function mapValidateCommunities(raw: ValidateResponse | undefined) {
     members: c.member_count || '',
     rationale: c.rationale,
     url: c.link,
-    platformColor: '#6c5ce7',
+    platformColor: 'var(--accent-purple)',
   }));
 }

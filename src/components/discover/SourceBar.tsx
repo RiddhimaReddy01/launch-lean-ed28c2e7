@@ -1,4 +1,4 @@
-import type { Source } from '@/test/__mocks__/discover';
+import type { Source } from '@/types/research-ui';
 
 interface SourceBarProps {
   sources: Source[];
