@@ -3,7 +3,7 @@
  * Base request function used by all API modules
  */
 
-const API_BASE = 'https://launch-lean-backend.onrender.com';
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const API_TIMEOUT = 30000;
 
 export class APIError extends Error {
