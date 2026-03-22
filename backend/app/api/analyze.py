@@ -33,8 +33,8 @@ async def analyze_section(
     if section not in VALID_SECTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid section: {section}. Must be one of: {VALID_SECTIONS}")
 
-    decomp = req.decomposition
-    insight = req.insight
+    decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
+    insight = req.insight.model_dump() if hasattr(req.insight, 'model_dump') else req.insight
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")
