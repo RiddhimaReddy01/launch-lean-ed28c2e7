@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { getIdea, updateIdea, deleteIdea, getValidationExperiments, createValidationExperiment, exportIdea } from '@/api';
+import { getIdea, updateIdea, deleteIdea, getValidationExperiments, createValidationExperiment, exportIdea, type IdeaDetailResponse } from '@/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 
