@@ -28,14 +28,14 @@ app = FastAPI(
 )
 
 # ── CORS ──
-# For demo/hackathon: allow specific origins or all
-cors_origins = settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"]
+# Allow all origins for Cloudflare Tunnel + Lovable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=3600,
 )
 
 # ── Startup Validation ──
