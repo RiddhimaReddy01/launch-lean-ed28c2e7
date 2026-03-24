@@ -62,6 +62,35 @@ async def validate_environment():
 app.include_router(router)
 
 
+# ── Debug Endpoint ──
+@app.get("/debug/llm-test")
+async def test_llm():
+    """Debug endpoint to test LLM connectivity"""
+    from app.services.llm_client import call_llm
+    import traceback
+
+    try:
+        result = await call_llm(
+            system_prompt="You are helpful",
+            user_prompt="Say hello in JSON: {\"greeting\": \"...\"}",
+            max_tokens=50,
+            json_mode=True
+        )
+        return {
+            "status": "SUCCESS",
+            "result": result,
+            "message": "LLM working!"
+        }
+    except Exception as e:
+        logger.error(f"LLM Error: {e}\n{traceback.format_exc()}")
+        return {
+            "status": "ERROR",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 # ── Health Check ──
 @app.get("/")
 async def root():
