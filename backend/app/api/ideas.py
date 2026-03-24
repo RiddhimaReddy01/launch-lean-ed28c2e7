@@ -110,7 +110,7 @@ def _check_progress(idea: dict) -> dict:
         "has_discover": idea.get("discover") is not None,
         "has_analyze": idea.get("analyze") is not None,
         "has_setup": idea.get("setup") is not None,
-        "has_validate": idea.get("validation") is not None,
+        "has_validate": idea.get("validate") is not None,
     }
 
 
@@ -138,7 +138,7 @@ async def save_idea(
         "discover": req.discover,
         "analyze": req.analyze,
         "setup": req.setup,
-        "validation": req.validation,
+        "validate": req.validation,
         "tags": req.tags or [],
         "notes": req.notes,
         "status": "draft",
@@ -270,7 +270,7 @@ async def get_idea(
             discover=idea.get("discover"),
             analyze=idea.get("analyze"),
             setup=idea.get("setup"),
-            validation=idea.get("validation"),
+            validation=idea.get("validate"),
             swot=idea.get("swot"),
             risks=idea.get("risks"),
             financials=idea.get("financials"),
@@ -337,7 +337,7 @@ async def update_idea(
             discover=idea.get("discover"),
             analyze=idea.get("analyze"),
             setup=idea.get("setup"),
-            validation=idea.get("validation"),
+            validation=idea.get("validate"),
             swot=idea.get("swot"),
             risks=idea.get("risks"),
             financials=idea.get("financials"),
