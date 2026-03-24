@@ -17,6 +17,7 @@ from app.prompts.templates import (
     analyze_competitors_system, analyze_rootcause_system,
     analyze_costs_preview_system, analyze_section_user,
 )
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -24,14 +25,26 @@ router = APIRouter()
 VALID_SECTIONS = {"opportunity", "customers", "competitors", "rootcause", "costs"}
 
 
+# Simpler request model for frontend (accepts raw API responses)
+class SimpleAnalyzeRequest(BaseModel):
+    section: str
+    decomposition: dict  # Raw response from decompose
+    discover: dict  # Raw response from discover (extract first insight)
+    prior_context: dict | None = None
+
+
 @router.post("/api/analyze-section", response_model=AnalyzeResponse)
 async def analyze_section(
     req: AnalyzeRequest,
     user: dict | None = Depends(optional_user),
 ):
+    logger.info(f"Analyze request: section={req.section}, insight={req.insight.title if hasattr(req.insight, 'title') else 'N/A'}")
+
     section = req.section.lower().strip()
     if section not in VALID_SECTIONS:
-        raise HTTPException(status_code=400, detail=f"Invalid section: {section}. Must be one of: {VALID_SECTIONS}")
+        error_msg = f"Invalid section: {section}. Must be one of: {VALID_SECTIONS}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
 
     decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
     insight = req.insight.model_dump() if hasattr(req.insight, 'model_dump') else req.insight
@@ -55,6 +68,59 @@ async def analyze_section(
         raise HTTPException(status_code=503, detail="All LLM providers unavailable")
 
     return AnalyzeResponse(section=section, data=data)
+
+
+@router.post("/api/analyze-simple", response_model=AnalyzeResponse)
+async def analyze_simple(
+    req: SimpleAnalyzeRequest,
+    user: dict | None = Depends(optional_user),
+):
+    """
+    Simpler analyze endpoint for frontend.
+    Accepts raw API responses and extracts what's needed.
+    """
+    logger.info(f"Simple analyze: section={req.section}")
+
+    section = req.section.lower().strip()
+    if section not in VALID_SECTIONS:
+        error_msg = f"Invalid section: {section}. Must be one of: {VALID_SECTIONS}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
+
+    try:
+        # Extract insight from discover response
+        insights = req.discover.get("insights", [])
+        if not insights:
+            raise HTTPException(status_code=400, detail="No insights in discover response")
+
+        insight = insights[0]
+
+        # Use raw dicts directly
+        decomp = req.decomposition
+        btype = decomp.get("business_type", "")
+        loc = decomp.get("location", {})
+        city = loc.get("city", "") if isinstance(loc, dict) else ""
+        state = loc.get("state", "") if isinstance(loc, dict) else ""
+        metro = loc.get("metro", "") if isinstance(loc, dict) else ""
+
+        handler = {
+            "opportunity": _handle_opportunity,
+            "customers": _handle_customers,
+            "competitors": _handle_competitors,
+            "rootcause": _handle_rootcause,
+            "costs": _handle_costs,
+        }[section]
+
+        data = await handler(decomp, insight, btype, city, state, metro, req.prior_context)
+
+        logger.info(f"Analyze success: {section}")
+        return AnalyzeResponse(section=section, data=data)
+
+    except AllProvidersExhaustedError:
+        raise HTTPException(status_code=503, detail="All LLM providers unavailable")
+    except Exception as e:
+        logger.error(f"Analyze error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ═══ SECTION HANDLERS ═══
