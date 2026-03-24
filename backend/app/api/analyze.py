@@ -166,9 +166,9 @@ async def _handle_competitors(
 ) -> dict:
     """Section C: Competitive landscape with gaps."""
 
-    # Ingestion: 3-5 Serper queries for competitor data
-    queries = build_competitor_queries(decomp)
-    search_results = await run_search_queries(queries, location=f"{city}, {state}", num_per_query=8)
+    # Ingestion: Competitor data from Serper
+    queries = build_competitor_queries(decomp)[:3]  # Limit to first 3 queries
+    search_results = await run_search_queries(queries, location=f"{city}, {state}", num_per_query=5)  # Reduced for speed
     cleaned = clean_search_results(search_results, query_type="competitors")
 
     competitor_context = "\n".join(

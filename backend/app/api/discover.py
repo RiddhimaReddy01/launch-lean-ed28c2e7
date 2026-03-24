@@ -24,8 +24,8 @@ from app.prompts.templates import discover_extract_signals_system, discover_extr
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-SERPER_QUERY_CAP = 5
-POST_BUDGET = 80
+SERPER_QUERY_CAP = 3        # Reduced from 5 for faster discovery
+POST_BUDGET = 40            # Reduced from 80 for faster Reddit scraping
 SAMPLE_PER_GROUP = 5
 
 
@@ -80,7 +80,7 @@ async def discover_insights(
 
     reddit_posts, raw_search = await asyncio.gather(
         fetch_reddit(),
-        run_search_queries(search_queries, location=location_str, num_per_query=10)
+        run_search_queries(search_queries, location=location_str, num_per_query=5)  # Reduced for speed
     )
 
     # Clean and merge data

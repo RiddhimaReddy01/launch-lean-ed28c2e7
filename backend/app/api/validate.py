@@ -57,8 +57,8 @@ async def generate_validation(
 
     # ═══ STAGE 1: DATA INGESTION ═══
     # Only community discovery requires new external data
-    queries = build_community_queries(decomp)
-    search_results = await run_search_queries(queries, location=f"{city}, {state}", num_per_query=8)
+    queries = build_community_queries(decomp)[:2]  # Limit to first 2 queries
+    search_results = await run_search_queries(queries, location=f"{city}, {state}", num_per_query=5)  # Reduced for speed
 
     # ═══ STAGE 2: DATA CLEANING ═══
     cleaned_communities = clean_search_results(search_results, query_type="communities")
