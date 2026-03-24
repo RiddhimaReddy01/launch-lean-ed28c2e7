@@ -110,7 +110,7 @@ def _check_progress(idea: dict) -> dict:
         "has_discover": idea.get("discover") is not None,
         "has_analyze": idea.get("analyze") is not None,
         "has_setup": idea.get("setup") is not None,
-        "has_validate": idea.get("validate") is not None,
+        "has_validate": idea.get("validation") is not None,
     }
 
 
@@ -138,7 +138,7 @@ async def save_idea(
         "discover": req.discover,
         "analyze": req.analyze,
         "setup": req.setup,
-        "validate": req.validate,
+        "validation": req.validation,
         "tags": req.tags or [],
         "notes": req.notes,
         "status": "draft",
@@ -151,24 +151,34 @@ async def save_idea(
         if not response.data:
             raise HTTPException(status_code=400, detail="Failed to save idea")
 
-        idea = response.data[0]
+        # Convert Supabase response to clean dict
+        raw_idea = response.data[0]
+        if isinstance(raw_idea, dict):
+            idea_dict = raw_idea
+        else:
+            idea_dict = dict(raw_idea)
 
-        logger.info(f"Idea saved with ID: {idea['id']}")
+        logger.info(f"Idea saved with ID: {idea_dict.get('id')}")
+
+        progress = _check_progress(idea_dict)
 
         return IdeaResponse(
-            id=idea["id"],
-            title=idea["title"],
-            description=idea["description"],
-            status=idea["status"],
-            created_at=idea["created_at"],
-            updated_at=idea["updated_at"],
-            tags=idea.get("tags", []),
-            **_check_progress(idea)
+            id=str(idea_dict.get("id", "")),
+            title=str(idea_dict.get("title", "")),
+            description=idea_dict.get("description"),
+            status=str(idea_dict.get("status", "draft")),
+            created_at=str(idea_dict.get("created_at", "")),
+            updated_at=str(idea_dict.get("updated_at", "")),
+            tags=list(idea_dict.get("tags", [])),
+            **progress
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error saving idea: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to save idea")
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        logger.error(f"Error saving idea: {error_msg}", exc_info=True)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.get("/api/ideas", response_model=list[IdeaResponse])
@@ -260,7 +270,7 @@ async def get_idea(
             discover=idea.get("discover"),
             analyze=idea.get("analyze"),
             setup=idea.get("setup"),
-            validate=idea.get("validate"),
+            validation=idea.get("validation"),
             swot=idea.get("swot"),
             risks=idea.get("risks"),
             financials=idea.get("financials"),
@@ -327,7 +337,7 @@ async def update_idea(
             discover=idea.get("discover"),
             analyze=idea.get("analyze"),
             setup=idea.get("setup"),
-            validate=idea.get("validate"),
+            validation=idea.get("validation"),
             swot=idea.get("swot"),
             risks=idea.get("risks"),
             financials=idea.get("financials"),
