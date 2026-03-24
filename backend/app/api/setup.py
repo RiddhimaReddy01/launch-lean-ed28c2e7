@@ -17,11 +17,17 @@ async def setup_section(
     req: SetupRequest,
     user: dict | None = Depends(optional_user),
 ):
-    """Generate complete launch plan from ANALYZE data."""
+    """Generate complete launch plan from business idea."""
 
-    decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
+    # Step 1: Call decompose internally
+    from app.api.decompose import decompose_idea
+    from app.schemas.models import DecomposeRequest
 
-    # Extract prior analysis data
+    decompose_req = DecomposeRequest(idea=req.idea)
+    decomp_response = await decompose_idea(decompose_req, user=user)
+    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+
+    # Step 2: Call discover internally if we need insights (optional, for richer context)
     prior_context = req.prior_context or {}
     costs = prior_context.get("costs", {})
     root_causes = prior_context.get("root_causes", {}).get("root_causes", [])

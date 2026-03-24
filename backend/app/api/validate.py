@@ -27,8 +27,28 @@ async def generate_validation(
     req: ValidateRequest,
     user: dict | None = Depends(optional_user),
 ):
-    decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
-    insight = req.insight.model_dump() if hasattr(req.insight, 'model_dump') else req.insight
+    # Step 1: Call decompose internally
+    from app.api.decompose import decompose_idea
+    from app.schemas.models import DecomposeRequest
+
+    decompose_req = DecomposeRequest(idea=req.idea)
+    decomp_response = await decompose_idea(decompose_req, user=user)
+    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+
+    # Step 2: Call discover internally to get insights
+    from app.api.discover import discover_insights
+    from app.schemas.models import DiscoverRequest
+
+    discover_req = DiscoverRequest(idea=req.idea)
+    discover_response = await discover_insights(discover_req, user=user)
+    discover_data = discover_response.model_dump() if hasattr(discover_response, 'model_dump') else discover_response
+
+    # Extract first insight
+    insights = discover_data.get("insights", [])
+    if not insights:
+        raise HTTPException(status_code=400, detail="No insights found for this idea")
+    insight = insights[0]
+
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")

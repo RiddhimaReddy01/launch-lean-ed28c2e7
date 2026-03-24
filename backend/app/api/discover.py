@@ -35,7 +35,14 @@ async def discover_insights(
     user: dict | None = Depends(optional_user),
 ):
     """Discover market insights from Reddit and Google search."""
-    decomp = req.decomposition.model_dump() if hasattr(req.decomposition, 'model_dump') else req.decomposition
+    # Step 1: Call decompose internally to get business structure
+    from app.api.decompose import decompose_idea
+    from app.schemas.models import DecomposeRequest
+
+    decompose_req = DecomposeRequest(idea=req.idea)
+    decomp_response = await decompose_idea(decompose_req, user=user)
+    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")

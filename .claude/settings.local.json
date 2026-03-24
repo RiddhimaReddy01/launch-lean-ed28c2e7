@@ -6,7 +6,8 @@
       "Bash(python3 -m py_compile /c/Users/riddh/OneDrive/Desktop/launchlens-backend/launchlens-backend/app/main.py)",
       "Bash(curl -s -X POST \"http://localhost:8000/api/decompose-idea\" -H \"Content-Type: application/json\" -d '{\"\"idea\"\": \"\"Dog walking service in Brooklyn\"\"}')",
       "Bash(npm run:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git add:*)"
     ]
   }
 }
