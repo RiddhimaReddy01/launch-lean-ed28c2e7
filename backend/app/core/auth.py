@@ -28,15 +28,9 @@ async def get_current_user(
     if credentials is None:
         logger.warning("Using development bypass - no JWT validation")
         return {
-            "id": "550e8400-e29b-41d4-a716-446655440000",  # Valid UUID format for dev user
+            "id": "d23de268-412c-4b85-8fa9-29416047b765",  # Existing dev user in database
             "email": "developer@launchlens.dev",
         }
-
-    if credentials is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Missing authorization token. Use: Authorization: Bearer {token}"
-        )
 
     token = credentials.credentials
 
