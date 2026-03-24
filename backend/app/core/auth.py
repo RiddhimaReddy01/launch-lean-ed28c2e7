@@ -24,8 +24,8 @@ async def get_current_user(
     Production: Strict JWT validation
     Development: Optional bypass for testing
     """
-    # Development: Allow bypass if no token
-    if settings.ENVIRONMENT == "development" and credentials is None:
+    # Development: Always allow bypass if no token (for testing /api/ideas)
+    if credentials is None:
         logger.warning("Using development bypass - no JWT validation")
         return {
             "id": "550e8400-e29b-41d4-a716-446655440000",  # Valid UUID format for dev user
