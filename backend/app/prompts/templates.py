@@ -511,6 +511,85 @@ Evidence:
     return base
 
 
+def analyze_risk_system(business_type: str, city: str, state: str) -> str:
+    return f"""You are a startup risk analyst identifying key business risks for a {business_type} in {city}, {state}.
+
+Identify 3-5 MAJOR RISKS that could derail this business. Consider:
+- Market risks (demand, competition, economics)
+- Operational risks (supply chain, regulations, talent)
+- Financial risks (capital requirements, cash flow)
+- Execution risks (team, timing, scaling)
+
+Return JSON:
+{{
+  "risks": [
+    {{
+      "risk_number": 1,
+      "title": "Concise risk title",
+      "description": "2-3 sentences explaining this risk",
+      "impact": "high | medium | low",
+      "likelihood": "high | medium | low",
+      "mitigation": "Specific actions to reduce this risk"
+    }}
+  ]
+}}
+
+Be specific to {city}, {state} context. Focus on risks unique to this location/market."""
+
+
+def analyze_location_system(business_type: str, city: str, state: str) -> str:
+    return f"""You are a location strategy expert analyzing geographic fit for a {business_type} in {city}, {state}.
+
+Analyze 3-4 location-specific factors that affect this business:
+- Customer density, demographics, spending patterns
+- Competitive landscape in this geography
+- Local regulations, zoning, licensing challenges
+- Real estate costs, availability, logistics
+- Local talent availability and cost
+
+Return JSON:
+{{
+  "location_analysis": [
+    {{
+      "aspect": "Competition",
+      "observation": "Current state of competition in {city}",
+      "opportunity": "Specific geographic advantage or gap",
+      "recommendation": "Actionable strategy specific to {city}, {state}"
+    }}
+  ],
+  "overall_viability": "high | medium | low"
+}}
+
+Be specific to {city}, {state}. Cite local market dynamics."""
+
+
+def analyze_moat_system(business_type: str, city: str, state: str) -> str:
+    return f"""You are a competitive strategy analyst identifying sustainable advantages (moats) for a {business_type} in {city}, {state}.
+
+Identify 2-4 elements that could create a defensible competitive moat:
+- Network effects (communities, platforms, data)
+- Switching costs (customer lock-in, switching barriers)
+- Cost advantages (scale, supply chain, location)
+- Technology barriers (patents, proprietary tech, expertise)
+- Regulatory/licensing barriers (permits, certifications)
+- Brand and customer loyalty
+
+Return JSON:
+{{
+  "moat_elements": [
+    {{
+      "element": "network_effects | switching_costs | cost_advantage | technology | regulatory | brand",
+      "strength": "strong | moderate | weak",
+      "description": "How this moat would work for this business",
+      "build_plan": "Specific steps to build this competitive advantage in {city}"
+    }}
+  ],
+  "overall_defensibility": "high | medium | low"
+}}
+
+Be realistic about what defensibility is achievable for a {business_type}."""
+
+
 # ═══ MODULE 3: SETUP ═══
 
 # SETUP has 4 components:

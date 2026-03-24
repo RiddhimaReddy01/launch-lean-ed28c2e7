@@ -79,8 +79,10 @@ class DiscoverResponse(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
-    idea: str = Field(..., min_length=3, max_length=500, description="Raw business idea string")
-    section: str  # opportunity | customers | competitors | rootcause | costs
+    idea: Optional[str] = Field(None, min_length=3, max_length=500, description="Raw business idea string (OR provide decomposition+insight)")
+    section: str  # opportunity | customers | competitors | rootcause | costs | risk | location | moat
+    decomposition: Optional[dict] = None  # Pre-computed decomposition (from frontend) - skip internal call if provided
+    insight: Optional[dict] = None        # Pre-computed insight (from frontend) - skip internal call if provided
     prior_context: Optional[dict] = None
 
 
@@ -152,6 +154,43 @@ class CostsPreviewResponse(BaseModel):
     total_range: dict = Field(default_factory=dict)
     breakdown: list[CostBreakdown] = Field(default_factory=list)
     note: str = ""
+
+
+class Risk(BaseModel):
+    risk_number: int = 0
+    title: str = ""
+    description: str = ""
+    impact: str = ""  # high | medium | low
+    likelihood: str = ""  # high | medium | low
+    mitigation: str = ""
+
+
+class RiskResponse(BaseModel):
+    risks: list[Risk] = Field(default_factory=list)
+
+
+class LocationInsight(BaseModel):
+    aspect: str = ""  # competition | customer_density | regulations | real_estate | logistics | etc
+    observation: str = ""
+    opportunity: str = ""
+    recommendation: str = ""
+
+
+class LocationResponse(BaseModel):
+    location_analysis: list[LocationInsight] = Field(default_factory=list)
+    overall_viability: str = ""  # high | medium | low
+
+
+class MoatElement(BaseModel):
+    element: str = ""  # network_effects | switching_costs | cost_advantage | technology | regulatory_moat | etc
+    strength: str = ""  # strong | moderate | weak
+    description: str = ""
+    build_plan: str = ""
+
+
+class MoatResponse(BaseModel):
+    moat_elements: list[MoatElement] = Field(default_factory=list)
+    overall_defensibility: str = ""  # high | medium | low
 
 
 class AnalyzeResponse(BaseModel):

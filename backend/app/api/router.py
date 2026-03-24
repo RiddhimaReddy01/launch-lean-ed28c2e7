@@ -16,6 +16,9 @@ from app.api import (
     export,
     progress,
     tracking,
+    insights,
+    scorecard,
+    profile,
 )
 
 # Create main router
@@ -34,4 +37,7 @@ router.include_router(export.router, tags=["Export"])
 router.include_router(analysis.router, tags=["Advanced Analysis"])
 router.include_router(progress.router, tags=["Progress Tracking"])
 router.include_router(tracking.router, tags=["Validation Tracking"])
+router.include_router(insights.router, tags=["Insights"])
+router.include_router(scorecard.router, tags=["Scorecard"])
+router.include_router(profile.router, tags=["Profile"])
 

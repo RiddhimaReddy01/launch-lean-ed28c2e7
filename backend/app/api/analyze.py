@@ -1,7 +1,11 @@
 """
 POST /api/analyze-section
-Generates one of five analysis sections on demand (lazy-loaded per tab click).
-Sections: opportunity | customers | competitors | rootcause | costs
+Generates one of eight analysis sections on demand (lazy-loaded per tab click).
+Sections: opportunity | customers | competitors | rootcause | costs | risk | location | moat
+
+Accepts two request formats:
+1. Raw idea: {idea, section} - will call decompose + discover internally
+2. Pre-computed: {section, decomposition, insight} - skips internal calls
 """
 
 import logging
@@ -15,13 +19,14 @@ from app.services.data_cleaner import clean_search_results
 from app.prompts.templates import (
     analyze_opportunity_system, analyze_customers_system,
     analyze_competitors_system, analyze_rootcause_system,
-    analyze_costs_preview_system, analyze_section_user,
+    analyze_costs_preview_system, analyze_risk_system,
+    analyze_location_system, analyze_moat_system, analyze_section_user,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-VALID_SECTIONS = {"opportunity", "customers", "competitors", "rootcause", "costs"}
+VALID_SECTIONS = {"opportunity", "customers", "competitors", "rootcause", "costs", "risk", "location", "moat"}
 
 
 @router.post("/api/analyze-section", response_model=AnalyzeResponse)
@@ -29,48 +34,62 @@ async def analyze_section(
     req: AnalyzeRequest,
     user: dict | None = Depends(optional_user),
 ):
-    logger.info(f"Analyze request: section={req.section}, idea={req.idea[:50]}")
-
     section = req.section.lower().strip()
+    logger.info(f"Analyze request: section={section}, has_decomposition={req.decomposition is not None}, has_insight={req.insight is not None}")
+
     if section not in VALID_SECTIONS:
         error_msg = f"Invalid section: {section}. Must be one of: {VALID_SECTIONS}"
         logger.error(error_msg)
         raise HTTPException(status_code=400, detail=error_msg)
 
-    # Step 1: Call decompose internally
-    from app.api.decompose import decompose_idea
-    from app.schemas.models import DecomposeRequest
+    # Handle two request formats:
+    # 1. Pre-computed (from Lovable frontend): decomposition + insight provided, skip internal calls
+    # 2. Raw idea: call decompose + discover internally
 
-    decompose_req = DecomposeRequest(idea=req.idea)
-    decomp_response = await decompose_idea(decompose_req, user=user)
-    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+    if req.decomposition and req.insight:
+        # Format 1: Pre-computed data from frontend - skip internal API calls
+        logger.info(f"Using pre-computed decomposition and insight")
+        decomp = req.decomposition
+        insight = req.insight
+    elif req.idea:
+        # Format 2: Raw idea string - call decompose + discover internally
+        logger.info(f"Calling decompose + discover internally for idea")
+        from app.api.decompose import decompose_idea
+        from app.api.discover import discover_insights
+        from app.schemas.models import DecomposeRequest, DiscoverRequest
 
-    # Step 2: Call discover internally to get insights
-    from app.api.discover import discover_insights
-    from app.schemas.models import DiscoverRequest
+        decompose_req = DecomposeRequest(idea=req.idea)
+        decomp_response = await decompose_idea(decompose_req, user=user)
+        decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
 
-    discover_req = DiscoverRequest(idea=req.idea)
-    discover_response = await discover_insights(discover_req, user=user)
-    discover_data = discover_response.model_dump() if hasattr(discover_response, 'model_dump') else discover_response
+        discover_req = DiscoverRequest(idea=req.idea)
+        discover_response = await discover_insights(discover_req, user=user)
+        discover_data = discover_response.model_dump() if hasattr(discover_response, 'model_dump') else discover_response
 
-    # Extract first insight
-    insights = discover_data.get("insights", [])
-    if not insights:
-        raise HTTPException(status_code=400, detail="No insights found for this idea")
-    insight = insights[0]
+        insights = discover_data.get("insights", [])
+        if not insights:
+            raise HTTPException(status_code=400, detail="No insights found for this idea")
+        insight = insights[0]
+    else:
+        raise HTTPException(status_code=400, detail="Provide either 'idea' or 'decomposition+insight'")
 
+    # Extract location details
     loc = decomp.get("location", {})
     city = loc.get("city", "")
     state = loc.get("state", "")
     metro = loc.get("metro", "")
     btype = decomp.get("business_type", "")
 
+    # Dispatch to appropriate handler
     handler = {
         "opportunity": _handle_opportunity,
         "customers": _handle_customers,
         "competitors": _handle_competitors,
         "rootcause": _handle_rootcause,
         "costs": _handle_costs,
+        "risk": _handle_risk,
+        "location": _handle_location,
+        "moat": _handle_moat,
     }[section]
 
     try:
@@ -121,6 +140,16 @@ async def _handle_opportunity(
         raw["tam"], raw["sam"] = raw["sam"], raw["tam"]
     if sam_val and som_val and sam_val < som_val and "sam" in raw and "som" in raw:
         raw["sam"], raw["som"] = raw["som"], raw["sam"]
+
+    # Ensure funnel is never null (fix frontend crash)
+    if "funnel" not in raw or not raw["funnel"]:
+        raw["funnel"] = {
+            "population": 0,
+            "aware": 0,
+            "interested": 0,
+            "willing_to_try": 0,
+            "repeat_customers": 0
+        }
 
     return raw
 
@@ -281,6 +310,97 @@ async def _handle_costs(
             total["min"], total["max"] = mx, mn
         raw["total_range"] = total
 
+    return raw
+
+
+async def _handle_risk(
+    decomp: dict, insight: dict, btype: str,
+    city: str, state: str, metro: str,
+    prior_context: dict | None,
+) -> dict:
+    """Section: Risk assessment - key risks that could derail the business."""
+
+    system = analyze_risk_system(btype, city, state)
+    user_prompt = analyze_section_user("risk", insight, decomp)
+
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.5, max_tokens=2000)
+
+    # Post-processing
+    risks = raw.get("risks", [])
+    risks = risks[:5]  # Cap at 5 risks
+
+    # Validate impact and likelihood values
+    valid_levels = {"high", "medium", "low"}
+    for r in risks:
+        if r.get("impact", "").lower() not in valid_levels:
+            r["impact"] = "medium"
+        if r.get("likelihood", "").lower() not in valid_levels:
+            r["likelihood"] = "medium"
+
+    # Sort by impact * likelihood (high impact + high likelihood first)
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    risks.sort(key=lambda r: (
+        priority_order.get(r.get("impact", "medium").lower(), 1) +
+        priority_order.get(r.get("likelihood", "medium").lower(), 1)
+    ))
+    raw["risks"] = risks
+
+    return raw
+
+
+async def _handle_location(
+    decomp: dict, insight: dict, btype: str,
+    city: str, state: str, metro: str,
+    prior_context: dict | None,
+) -> dict:
+    """Section: Location-specific insights - geographic advantages and challenges."""
+
+    system = analyze_location_system(btype, city, state)
+    user_prompt = analyze_section_user("location", insight, decomp)
+
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.4, max_tokens=2000)
+
+    # Post-processing
+    analyses = raw.get("location_analysis", [])
+    analyses = analyses[:4]  # Cap at 4 aspects
+
+    # Validate overall_viability
+    valid_viability = {"high", "medium", "low"}
+    if raw.get("overall_viability", "").lower() not in valid_viability:
+        raw["overall_viability"] = "medium"
+
+    raw["location_analysis"] = analyses
+    return raw
+
+
+async def _handle_moat(
+    decomp: dict, insight: dict, btype: str,
+    city: str, state: str, metro: str,
+    prior_context: dict | None,
+) -> dict:
+    """Section: Competitive moat - sustainable advantages and defensibility."""
+
+    system = analyze_moat_system(btype, city, state)
+    user_prompt = analyze_section_user("moat", insight, decomp)
+
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.5, max_tokens=2000)
+
+    # Post-processing
+    elements = raw.get("moat_elements", [])
+    elements = elements[:4]  # Cap at 4 moat elements
+
+    # Validate strength values
+    valid_strengths = {"strong", "moderate", "weak"}
+    for elem in elements:
+        if elem.get("strength", "").lower() not in valid_strengths:
+            elem["strength"] = "moderate"
+
+    # Validate defensibility
+    valid_defensibility = {"high", "medium", "low"}
+    if raw.get("overall_defensibility", "").lower() not in valid_defensibility:
+        raw["overall_defensibility"] = "medium"
+
+    raw["moat_elements"] = elements
     return raw
 
 

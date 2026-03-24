@@ -386,3 +386,44 @@ async def delete_idea(
     except Exception as e:
         logger.error(f"Error deleting idea: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete idea")
+
+
+@router.get("/api/dashboard/stats")
+async def get_dashboard_stats(
+    user: dict = Depends(get_current_user),
+):
+    """Get dashboard statistics for current user."""
+
+    logger.info(f"User {user['id']} fetching dashboard stats")
+
+    supabase = get_supabase()
+
+    try:
+        # Count active projects (draft, in_progress)
+        active_response = supabase.table("ideas").select("id", count="exact").eq("user_id", user["id"]).in_("status", ["draft", "in_progress"]).execute()
+        active_projects = active_response.count or 0
+
+        # Count completed projects
+        completed_response = supabase.table("ideas").select("id", count="exact").eq("user_id", user["id"]).eq("status", "completed").execute()
+        completed_projects = completed_response.count or 0
+
+        # Count total experiments
+        experiments_response = supabase.table("validation_experiments").select("id", count="exact").eq("user_id", user["id"]).execute()
+        total_experiments = experiments_response.count or 0
+
+        # Count saved insights
+        insights_response = supabase.table("idea_insights").select("id", count="exact").eq("user_id", user["id"]).execute()
+        saved_insights = insights_response.count or 0
+
+        logger.info(f"Dashboard stats: active={active_projects}, completed={completed_projects}, experiments={total_experiments}, insights={saved_insights}")
+
+        return {
+            "active_projects": active_projects,
+            "completed_projects": completed_projects,
+            "total_experiments": total_experiments,
+            "saved_insights": saved_insights,
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching dashboard stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard stats")
