@@ -3,6 +3,7 @@ Settings and configuration for LaunchLens.
 Loads environment variables via Pydantic BaseSettings.
 """
 
+import os
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
 
     # App
     FRONTEND_URL: str = "http://localhost:3000"
-    ENVIRONMENT: str = "development"
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")  # Default to development mode
     CORS_ORIGINS: str = ""  # Comma-separated list of allowed origins, empty = allow all
 
     # LLM Model Selection
