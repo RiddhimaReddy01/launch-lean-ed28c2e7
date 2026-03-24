@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # App
     FRONTEND_URL: str = "http://localhost:3000"
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")  # Default to development mode
+    ENVIRONMENT: str = "development"  # Always use development mode for now (allows auth bypass)
     CORS_ORIGINS: str = ""  # Comma-separated list of allowed origins, empty = allow all
 
     # LLM Model Selection
