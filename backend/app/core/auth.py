@@ -28,7 +28,7 @@ async def get_current_user(
     if settings.ENVIRONMENT == "development" and credentials is None:
         logger.warning("Using development bypass - no JWT validation")
         return {
-            "id": "dev-user-12345",
+            "id": "550e8400-e29b-41d4-a716-446655440000",  # Valid UUID format for dev user
             "email": "developer@launchlens.dev",
         }
 

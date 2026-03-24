@@ -221,8 +221,9 @@ async def list_ideas(
         return ideas
 
     except Exception as e:
-        logger.error(f"Error listing ideas: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to list ideas")
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        logger.error(f"Error listing ideas: {error_msg}", exc_info=True)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.get("/api/ideas/{idea_id}", response_model=IdeaDetailResponse)
