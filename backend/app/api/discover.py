@@ -24,8 +24,8 @@ from app.prompts.templates import discover_extract_signals_system, discover_extr
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-SERPER_QUERY_CAP = 3        # Reduced from 5 for faster discovery
-POST_BUDGET = 40            # Reduced from 80 for faster Reddit scraping
+SERPER_QUERY_CAP = 2        # Lower fan-out for faster discovery
+POST_BUDGET = 20            # Smaller evidence bundle for faster LLM extraction
 SAMPLE_PER_GROUP = 5
 
 
@@ -77,7 +77,7 @@ async def discover_insights(
         if not reddit_search_q:
             return []
         try:
-            raw_search_posts = await fetch_search_posts(reddit_search_q, limit=60)
+            raw_search_posts = await fetch_search_posts(reddit_search_q, limit=25)
             return [extract_post_fields(p) for p in raw_search_posts]
         except Exception as e:
             logger.warning(f"Reddit search failed: {e}")
@@ -85,7 +85,7 @@ async def discover_insights(
 
     reddit_posts, raw_search = await asyncio.gather(
         fetch_reddit(),
-        run_search_queries(search_queries, location=location_str, num_per_query=5)  # Reduced for speed
+        run_search_queries(search_queries, location=location_str, num_per_query=5)
     )
 
     # Clean and merge data
@@ -294,7 +294,7 @@ async def _extract_insights_with_signals(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.4,  # Moderate - balance consistency with insight discovery
-            max_tokens=2000,  # Room for 8-12 detailed insights
+            max_tokens=1200,  # Keep response compact for lower latency
             json_mode=True,
             preferred_provider="gemini",
         )
