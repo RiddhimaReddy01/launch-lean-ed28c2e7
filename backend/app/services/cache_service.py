@@ -13,6 +13,8 @@ from app.schemas.models import DecomposeResponse, DiscoverResponse
 
 logger = logging.getLogger(__name__)
 
+_search_cache_store: dict[str, tuple[float, list[dict]]] = {}
+
 # Initialize Supabase client
 try:
     supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
@@ -193,6 +195,14 @@ async def get_cached_search(
     Get cached search results by query hash.
     Returns None if cache miss, expired, or table doesn't exist.
     """
+    # Fast in-memory cache first for the current service instance.
+    mem_item = _search_cache_store.get(query_hash)
+    if mem_item:
+        expires_at_ts, cached_results = mem_item
+        if datetime.now(timezone.utc).timestamp() <= expires_at_ts:
+            return cached_results
+        _search_cache_store.pop(query_hash, None)
+
     if not supabase:
         return None
 
@@ -214,7 +224,12 @@ async def get_cached_search(
             await delete_search_cache(query_hash)
             return None
 
-        return result.data.get("results", [])
+        results = result.data.get("results", [])
+        _search_cache_store[query_hash] = (
+            expires_at.timestamp(),
+            results,
+        )
+        return results
 
     except Exception as e:
         # Graceful degradation if table doesn't exist - just return None (cache miss)
@@ -229,6 +244,12 @@ async def cache_search_results(
     ttl_days: int = 7,
 ):
     """Store search results in cache (gracefully handles missing table)."""
+    expires_at = datetime.now(timezone.utc) + timedelta(days=ttl_days)
+    _search_cache_store[query_hash] = (
+        expires_at.timestamp(),
+        results,
+    )
+
     if not supabase:
         return
 
@@ -238,7 +259,7 @@ async def cache_search_results(
                 "query_hash": query_hash,
                 "results": results,
                 "created_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": (datetime.now(timezone.utc) + timedelta(days=ttl_days)).isoformat(),
+                "expires_at": expires_at.isoformat(),
             }
         ).execute()
         logger.debug(f"Cached {len(results)} search results")
@@ -249,6 +270,8 @@ async def cache_search_results(
 
 async def delete_search_cache(query_hash: str):
     """Delete expired search cache entry."""
+    _search_cache_store.pop(query_hash, None)
+
     if not supabase:
         return
 

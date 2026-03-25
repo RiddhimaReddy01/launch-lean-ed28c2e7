@@ -98,6 +98,10 @@ async def decompose_idea(
         logger.warning(f"Stage 2 failed ({type(e).__name__}), using defaults")
         stage2_raw = {}
 
+    if not isinstance(stage2_raw, dict):
+        logger.warning(f"Stage 2 returned {type(stage2_raw).__name__}, using defaults")
+        stage2_raw = {}
+
     # ── Combine and post-process ──
     combined = {
         "business_type": business_type,

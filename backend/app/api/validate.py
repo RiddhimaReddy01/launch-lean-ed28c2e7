@@ -22,6 +22,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _fallback_insight_from_decomp(decomp: dict) -> dict:
+    """Create a minimal insight so validation can still produce assets."""
+    location = decomp.get("location", {}) or {}
+    location_label = ", ".join(filter(None, [location.get("city", ""), location.get("state", "")])).strip(", ")
+    business_type = decomp.get("business_type", "business idea")
+    title = f"Baseline validation plan for {business_type}"
+    if location_label:
+        title += f" in {location_label}"
+
+    return {
+        "id": "fallback_insight",
+        "type": "market_gap",
+        "title": title,
+        "score": 4.0,
+        "evidence": [
+            {
+                "quote": "Using decomposition-based fallback because discover insights were unavailable.",
+                "source": "system",
+                "score": 0,
+            }
+        ],
+        "source_platforms": ["system"],
+        "audience_estimate": "",
+    }
+
+
 @router.post("/api/generate-validation", response_model=ValidateResponse)
 async def generate_validation(
     req: ValidateRequest,
@@ -52,9 +78,7 @@ async def generate_validation(
             discover_data = discover_response.model_dump() if hasattr(discover_response, 'model_dump') else discover_response
 
         insights = (discover_data or {}).get("insights", [])
-        if not insights:
-            raise HTTPException(status_code=400, detail="No insights found for this idea")
-        insight = insights[0]
+        insight = insights[0] if insights else _fallback_insight_from_decomp(decomp)
 
     loc = decomp.get("location", {})
     city = loc.get("city", "")
