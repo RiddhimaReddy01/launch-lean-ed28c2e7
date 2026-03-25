@@ -6,7 +6,7 @@ Pipeline: Data ingestion → Cleaning → Merging → Insight generation → Res
 
 import logging
 import json
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import optional_user
 from app.services.llm_client import call_llm
@@ -35,13 +35,18 @@ async def discover_insights(
     user: dict | None = Depends(optional_user),
 ):
     """Discover market insights from Reddit and Google search."""
-    # Step 1: Call decompose internally to get business structure
-    from app.api.decompose import decompose_idea
-    from app.schemas.models import DecomposeRequest
+    # Prefer provided decomposition so downstream tabs can reuse shared context.
+    if req.decomposition:
+        decomp = req.decomposition
+    elif req.idea:
+        from app.api.decompose import decompose_idea
+        from app.schemas.models import DecomposeRequest
 
-    decompose_req = DecomposeRequest(idea=req.idea)
-    decomp_response = await decompose_idea(decompose_req, user=user)
-    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+        decompose_req = DecomposeRequest(idea=req.idea)
+        decomp_response = await decompose_idea(decompose_req, user=user)
+        decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+    else:
+        raise HTTPException(status_code=400, detail="Provide either 'idea' or 'decomposition'")
 
     loc = decomp.get("location", {})
     city = loc.get("city", "")

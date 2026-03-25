@@ -27,27 +27,34 @@ async def generate_validation(
     req: ValidateRequest,
     user: dict | None = Depends(optional_user),
 ):
-    # Step 1: Call decompose internally
-    from app.api.decompose import decompose_idea
-    from app.schemas.models import DecomposeRequest
+    # Prefer upstream context from the caller; only recompute if it is missing.
+    if req.decomposition:
+        decomp = req.decomposition
+    elif req.idea:
+        from app.api.decompose import decompose_idea
+        from app.schemas.models import DecomposeRequest
 
-    decompose_req = DecomposeRequest(idea=req.idea)
-    decomp_response = await decompose_idea(decompose_req, user=user)
-    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+        decompose_req = DecomposeRequest(idea=req.idea)
+        decomp_response = await decompose_idea(decompose_req, user=user)
+        decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+    else:
+        raise HTTPException(status_code=400, detail="Provide either 'idea' or 'decomposition'")
 
-    # Step 2: Call discover internally to get insights
-    from app.api.discover import discover_insights
-    from app.schemas.models import DiscoverRequest
+    insight = req.insight
+    if not insight:
+        discover_data = req.discover
+        if not discover_data and req.idea:
+            from app.api.discover import discover_insights
+            from app.schemas.models import DiscoverRequest
 
-    discover_req = DiscoverRequest(idea=req.idea)
-    discover_response = await discover_insights(discover_req, user=user)
-    discover_data = discover_response.model_dump() if hasattr(discover_response, 'model_dump') else discover_response
+            discover_req = DiscoverRequest(idea=req.idea, decomposition=decomp)
+            discover_response = await discover_insights(discover_req, user=user)
+            discover_data = discover_response.model_dump() if hasattr(discover_response, 'model_dump') else discover_response
 
-    # Extract first insight
-    insights = discover_data.get("insights", [])
-    if not insights:
-        raise HTTPException(status_code=400, detail="No insights found for this idea")
-    insight = insights[0]
+        insights = (discover_data or {}).get("insights", [])
+        if not insights:
+            raise HTTPException(status_code=400, detail="No insights found for this idea")
+        insight = insights[0]
 
     loc = decomp.get("location", {})
     city = loc.get("city", "")

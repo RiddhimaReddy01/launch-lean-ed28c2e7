@@ -36,7 +36,8 @@ class DecomposeResponse(BaseModel):
 
 
 class DiscoverRequest(BaseModel):
-    idea: str = Field(..., min_length=3, max_length=500, description="Raw business idea string")
+    idea: Optional[str] = Field(None, min_length=3, max_length=500, description="Raw business idea string")
+    decomposition: Optional[dict] = None
 
 
 class Evidence(BaseModel):
@@ -202,7 +203,10 @@ class AnalyzeResponse(BaseModel):
 
 
 class SetupRequest(BaseModel):
-    idea: str = Field(..., min_length=3, max_length=500, description="Raw business idea string")
+    idea: Optional[str] = Field(None, min_length=3, max_length=500, description="Raw business idea string")
+    decomposition: Optional[dict] = None
+    insight: Optional[dict] = None
+    discover: Optional[dict] = None
     analysis_context: Optional[dict] = None
     prior_context: Optional[dict] = None  # COSTS, ROOT_CAUSES, CUSTOMERS from ANALYZE
     selected_tier: str = "MID"  # LEAN | MID | PREMIUM
@@ -265,7 +269,10 @@ class SetupResponse(BaseModel):
 
 
 class ValidateRequest(BaseModel):
-    idea: str = Field(..., min_length=3, max_length=500, description="Raw business idea string")
+    idea: Optional[str] = Field(None, min_length=3, max_length=500, description="Raw business idea string")
+    decomposition: Optional[dict] = None
+    insight: Optional[dict] = None
+    discover: Optional[dict] = None
     channels: list[str] = Field(default_factory=lambda: ["landing_page", "survey"])
     analysis_context: Optional[dict] = None
     setup_context: Optional[dict] = None

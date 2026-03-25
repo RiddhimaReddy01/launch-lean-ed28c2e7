@@ -18,16 +18,23 @@ async def setup_section(
     user: dict | None = Depends(optional_user),
 ):
     """Generate complete launch plan from business idea."""
+    # Reuse upstream context when available to avoid recomputing shared work.
+    if req.decomposition:
+        decomp = req.decomposition
+    elif req.idea:
+        from app.api.decompose import decompose_idea
+        from app.schemas.models import DecomposeRequest
 
-    # Step 1: Call decompose internally
-    from app.api.decompose import decompose_idea
-    from app.schemas.models import DecomposeRequest
+        decompose_req = DecomposeRequest(idea=req.idea)
+        decomp_response = await decompose_idea(decompose_req, user=user)
+        decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either 'idea' or 'decomposition'",
+        )
 
-    decompose_req = DecomposeRequest(idea=req.idea)
-    decomp_response = await decompose_idea(decompose_req, user=user)
-    decomp = decomp_response.model_dump() if hasattr(decomp_response, 'model_dump') else decomp_response
-
-    # Step 2: Call discover internally if we need insights (optional, for richer context)
+    # Setup-specific generation uses prior analysis context, but does not need to rerun discover.
     prior_context = req.prior_context or {}
     costs = prior_context.get("costs", {})
     root_causes = prior_context.get("root_causes", {}).get("root_causes", [])
