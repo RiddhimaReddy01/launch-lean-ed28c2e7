@@ -71,9 +71,20 @@ class SourceSummary(BaseModel):
     post_count: int = 0
 
 
+class DiscoverSummary(BaseModel):
+    demand_strength: float = 0.0
+    signal_density: str = "low"
+    trend_direction: str = "stable"
+    trend_label: str = ""
+    top_regions: list[str] = Field(default_factory=list)
+    mixed_signals: list[str] = Field(default_factory=list)
+    summary: str = ""
+
+
 class DiscoverResponse(BaseModel):
     sources: list[SourceSummary] = Field(default_factory=list)
     insights: list[Insight] = Field(default_factory=list)
+    summary: DiscoverSummary = Field(default_factory=DiscoverSummary)
 
 
 # ═══ MODULE 2: ANALYZE ═══
@@ -177,9 +188,25 @@ class LocationInsight(BaseModel):
     recommendation: str = ""
 
 
+class GeoPoint(BaseModel):
+    lat: float = 0.0
+    lng: float = 0.0
+    label: str = ""
+
+
+class GeoArea(BaseModel):
+    name: str = ""
+    lat: float = 0.0
+    lng: float = 0.0
+    reason: str = ""
+    emphasis: str = "medium"
+
+
 class LocationResponse(BaseModel):
     location_analysis: list[LocationInsight] = Field(default_factory=list)
     overall_viability: str = ""  # high | medium | low
+    city_center: Optional[GeoPoint] = None
+    focus_areas: list[GeoArea] = Field(default_factory=list)
 
 
 class MoatElement(BaseModel):
@@ -197,6 +224,7 @@ class MoatResponse(BaseModel):
 class AnalyzeResponse(BaseModel):
     section: str = ""
     data: dict = Field(default_factory=dict)
+    synthesis: Optional[dict] = None
 
 
 # ═══ MODULE 3: SETUP ═══
@@ -263,6 +291,10 @@ class SetupResponse(BaseModel):
     suppliers: list[Supplier] = Field(default_factory=list)
     team: list[TeamRole] = Field(default_factory=list)
     timeline: list[TimelinePhase] = Field(default_factory=list)
+    recommendation: Optional[dict] = None
+    revenue_projection: Optional[dict] = None
+    founder_time_allocation: list[dict] = Field(default_factory=list)
+    vendor_benchmarks: list[dict] = Field(default_factory=list)
 
 
 # ═══ MODULE 4: VALIDATE ═══
@@ -342,6 +374,9 @@ class ValidateResponse(BaseModel):
     scorecard: Scorecard = Field(default_factory=Scorecard)
     # NEW: Strategy guidance
     strategy: Optional[ValidationStrategy] = None
+    expected_outcomes: dict = Field(default_factory=dict)
+    simulation: dict = Field(default_factory=dict)
+    recommended_sequence: list[str] = Field(default_factory=list)
 
 
 # ═══ VALIDATION EXPERIMENT TRACKING ═══

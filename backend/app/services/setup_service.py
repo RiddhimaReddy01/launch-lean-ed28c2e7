@@ -42,6 +42,8 @@ TIER_MULTIPLIERS = {
     }
 }
 
+TIER_ORDER = ["LEAN", "MID", "PREMIUM"]
+
 
 # ═══ CACHE OPERATIONS ═══
 
@@ -127,7 +129,7 @@ async def get_or_generate_suppliers(business_type: str, city: str, state: str, t
             temperature=0.3,
             max_tokens=1500,
             json_mode=True,
-            preferred_provider="huggingface",
+            preferred_provider="groq",
         )
 
         suppliers = json.loads(response).get("suppliers", []) if isinstance(response, str) else response.get("suppliers", [])
@@ -161,7 +163,7 @@ async def get_or_generate_team(business_type: str, tier: str, root_causes: list[
             temperature=0.3,
             max_tokens=1500,
             json_mode=True,
-            preferred_provider="huggingface",
+            preferred_provider="groq",
         )
 
         team = json.loads(response).get("team", []) if isinstance(response, str) else response.get("team", [])
@@ -193,7 +195,7 @@ async def get_or_generate_timeline(business_type: str, tier: str, pain_intensity
             temperature=0.3,
             max_tokens=1500,
             json_mode=True,
-            preferred_provider="huggingface",
+            preferred_provider="groq",
         )
 
         timeline = json.loads(response).get("timeline", []) if isinstance(response, str) else response.get("timeline", [])
@@ -235,9 +237,128 @@ async def generate_full_setup(decomposition: dict, costs: dict, root_causes: lis
         get_or_generate_timeline(business_type, selected_tier, pain_intensity, root_causes, costs)
     )
 
+    recommendation = _recommend_setup_tier(cost_tiers, pain_intensity, root_causes, selected_tier)
+    revenue_projection = _build_revenue_projection(cost_tiers, customers, selected_tier)
+    founder_time_allocation = _build_founder_time_allocation(business_type, selected_tier)
+    vendor_benchmarks = _build_vendor_benchmarks(suppliers, cost_tiers, selected_tier)
+
     return {
         "cost_tiers": cost_tiers,
         "suppliers": suppliers,
         "team": team,
-        "timeline": timeline
+        "timeline": timeline,
+        "recommendation": recommendation,
+        "revenue_projection": revenue_projection,
+        "founder_time_allocation": founder_time_allocation,
+        "vendor_benchmarks": vendor_benchmarks,
     }
+
+
+def _recommend_setup_tier(cost_tiers: list[dict], pain_intensity: float, root_causes: list[dict], selected_tier: str) -> dict:
+    tier_lookup = {tier["tier"]: tier for tier in cost_tiers}
+    hard_causes = sum(1 for cause in root_causes if "hard" in str(cause.get("difficulty", "")).lower())
+
+    recommended = "MID"
+    rationale = "Balanced execution gives you the best chance to validate demand without overbuilding."
+
+    if pain_intensity <= 4 and hard_causes >= 1:
+        recommended = "LEAN"
+        rationale = "Demand urgency is still moderate, so a lean launch lowers burn while you prove the core use case."
+    elif pain_intensity >= 8 and hard_causes == 0:
+        recommended = "PREMIUM"
+        rationale = "Demand urgency is strong and execution complexity is manageable, so investing in a faster premium rollout is justified."
+    elif hard_causes >= 2:
+        recommended = "MID"
+        rationale = "Execution complexity is elevated, so a balanced tier is safer than a premium burn profile."
+
+    not_viable: list[str] = []
+    premium_cost = tier_lookup.get("PREMIUM", {}).get("total_range", {}).get("max", 0)
+    mid_cost = tier_lookup.get("MID", {}).get("total_range", {}).get("max", 0)
+    if premium_cost and mid_cost and premium_cost > (mid_cost * 1.6):
+        not_viable.append("PREMIUM")
+    if pain_intensity <= 3:
+        not_viable.append("PREMIUM")
+
+    return {
+        "selected_tier": selected_tier,
+        "recommended_tier": recommended,
+        "rationale": rationale,
+        "not_recommended": list(dict.fromkeys(not_viable)),
+    }
+
+
+def _build_revenue_projection(cost_tiers: list[dict], customers: dict, selected_tier: str) -> dict:
+    tier_lookup = {tier["tier"]: tier for tier in cost_tiers}
+    current_tier = tier_lookup.get(selected_tier) or tier_lookup.get("MID") or {}
+    total_max = float(current_tier.get("total_range", {}).get("max", 0) or 0)
+
+    segments = customers.get("segments", []) if isinstance(customers, dict) else []
+    if segments:
+        avg_size = sum(float(seg.get("estimated_size", 0) or 0) for seg in segments) / len(segments)
+        avg_pain = sum(float(seg.get("pain_intensity", 0) or 0) for seg in segments) / len(segments)
+    else:
+        avg_size = 50000
+        avg_pain = 5
+
+    monthly_revenue = int(max(4000, min(45000, (avg_size * 0.0025) * max(1.1, avg_pain / 3.5))))
+    monthly_cost_base = max(3500, int(total_max / 18)) if total_max else 6000
+    monthly_profit = monthly_revenue - monthly_cost_base
+    if monthly_profit > 0 and total_max > 0:
+        breakeven_months = max(1, round(total_max / monthly_profit))
+    else:
+        breakeven_months = None
+
+    return {
+        "expected_monthly_revenue": monthly_revenue,
+        "expected_monthly_operating_cost": monthly_cost_base,
+        "expected_monthly_profit": monthly_profit,
+        "breakeven_months": breakeven_months,
+        "breakeven_label": f"{breakeven_months} months" if breakeven_months else "Not under current assumptions",
+    }
+
+
+def _build_founder_time_allocation(business_type: str, selected_tier: str) -> list[dict]:
+    lower_btype = (business_type or "").lower()
+    if any(term in lower_btype for term in ["restaurant", "bar", "food", "juice", "cafe"]):
+        allocation = {"ops": 45, "marketing": 25, "admin": 20, "partnerships": 10}
+    elif any(term in lower_btype for term in ["software", "app", "platform", "saas"]):
+        allocation = {"product": 35, "marketing": 30, "customer_research": 20, "admin": 15}
+    else:
+        allocation = {"ops": 40, "marketing": 30, "admin": 20, "customer_research": 10}
+
+    if selected_tier == "LEAN":
+        allocation = {k: v + (10 if k in {"ops", "product"} else -3) for k, v in allocation.items()}
+    elif selected_tier == "PREMIUM":
+        allocation = {k: v - (5 if k in {"ops", "product"} else 0) + (5 if k in {"marketing", "partnerships"} else 0) for k, v in allocation.items()}
+
+    total = sum(allocation.values()) or 100
+    return [
+        {"area": area.replace("_", " ").title(), "percent": round((percent / total) * 100)}
+        for area, percent in allocation.items()
+    ]
+
+
+def _build_vendor_benchmarks(suppliers: list[dict], cost_tiers: list[dict], selected_tier: str) -> list[dict]:
+    tier_lookup = {tier["tier"]: tier for tier in cost_tiers}
+    selected = tier_lookup.get(selected_tier) or {}
+    line_items = selected.get("line_items", [])
+    line_item_lookup = {item.get("category", "").lower(): item for item in line_items}
+
+    benchmarks = []
+    for supplier in suppliers[:6]:
+        category = str(supplier.get("category", "")).lower()
+        line_item = line_item_lookup.get(category)
+        benchmark_cost = None
+        if line_item:
+            benchmark_cost = {
+                "min": line_item.get("min_cost", 0),
+                "max": line_item.get("max_cost", 0),
+            }
+        benchmarks.append({
+            "vendor": supplier.get("name", ""),
+            "category": supplier.get("category", ""),
+            "location": supplier.get("location", ""),
+            "benchmark_cost_range": benchmark_cost,
+            "why_recommended": supplier.get("why_recommended", ""),
+        })
+    return benchmarks

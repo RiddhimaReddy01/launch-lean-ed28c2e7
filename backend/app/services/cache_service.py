@@ -112,7 +112,7 @@ async def get_cached_discover(
     try:
         result = (
             supabase.table("discover_insights_cache")
-            .select("sources, insights, expires_at")
+            .select("sources, insights, summary, expires_at")
             .eq("business_type", business_type.lower())
             .eq("city", (city.lower() or None))
             .eq("state", (state.lower() or None))
@@ -131,7 +131,9 @@ async def get_cached_discover(
 
         logger.debug(f"Cache hit: discover for {business_type} in {city}, {state}")
         return DiscoverResponse(
-            sources=result.data["sources"], insights=result.data["insights"]
+            sources=result.data["sources"],
+            insights=result.data["insights"],
+            summary=result.data.get("summary", {}),
         )
     except Exception as e:
         logger.debug(f"Discover cache lookup failed: {e}")
@@ -157,6 +159,7 @@ async def cache_discover(
                 "state": (state.lower() or None),
                 "sources": [s.model_dump() for s in response.sources],
                 "insights": [i.model_dump() for i in response.insights],
+                "summary": response.summary.model_dump(),
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "expires_at": (datetime.now(timezone.utc) + timedelta(hours=ttl_hours)).isoformat(),
             }

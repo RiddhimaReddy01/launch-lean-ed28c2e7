@@ -557,7 +557,14 @@ Return JSON:
       "recommendation": "Actionable strategy specific to {city}, {state}"
     }}
   ],
-  "overall_viability": "high | medium | low"
+  "overall_viability": "high | medium | low",
+  "focus_areas": [
+    {{
+      "name": "Neighborhood or district name",
+      "reason": "Why this area is attractive for launch or testing",
+      "emphasis": "high | medium | low"
+    }}
+  ]
 }}
 
 Be specific to {city}, {state}. Cite local market dynamics."""
@@ -783,60 +790,95 @@ Return concrete milestones and success metrics for each phase."""
 # ═══ MODULE 4: VALIDATE ═══
 
 
-def validate_system(business_type: str, city: str, state: str) -> str:
-    return f"""Generate demand validation materials for a {business_type} in {city}, {state}.
+def validate_system(business_type: str, city: str, state: str, channels: list[str]) -> str:
+    schema_parts = []
+    instructions = []
 
-CRITICAL: Use the EXACT pain language from the customer quotes provided. The landing page copy should sound like the customers, not like a marketer.
-
-Return JSON:
-{{
-  "landing_page": {{
+    if "landing_page" in channels:
+        schema_parts.append(
+            '''"landing_page": {
     "headline": "Attention-grabbing headline using #1 pain point",
     "subheadline": "Promise the solution in one sentence",
     "benefits": ["3-4 bullet points using customer language"],
     "cta_text": "Action-oriented button text",
     "social_proof_quote": "A real quote from Module 1 evidence"
-  }},
-  "survey": {{
+  }'''
+        )
+        instructions.append("For landing_page, use the exact customer pain language instead of generic marketing copy.")
+
+    if "survey" in channels:
+        schema_parts.append(
+            '''"survey": {
     "title": "Survey title",
     "questions": [
-      {{
+      {
         "number": 1,
         "question": "Question text",
         "type": "multiple_choice | scale | open_text | email",
         "options": ["array of options if multiple_choice, null otherwise"]
-      }}
+      }
     ]
-  }},
-  "whatsapp_message": {{
+  }'''
+        )
+        instructions.append(
+            "Generate exactly 7 survey questions in this order: "
+            "1. Frequency of current purchases "
+            "2. Current solution / where they go now "
+            "3. Biggest frustration (open text) "
+            "4. Willingness to switch (yes/no/maybe) "
+            "5. Price sensitivity (range options) "
+            "6. Location preference (multiple choice) "
+            "7. Email capture for launch updates."
+        )
+
+    if "whatsapp" in channels:
+        schema_parts.append(
+            '''"whatsapp_message": {
     "message": "Casual, shareable message for local groups. Include [SURVEY_LINK] placeholder.",
     "tone_note": "Brief note on tone"
-  }},
-  "communities": [
-    {{
+  }'''
+        )
+        instructions.append("For whatsapp_message, keep the tone conversational and easy to forward.")
+
+    if "communities" in channels:
+        schema_parts.append(
+            '''"communities": [
+    {
       "name": "Community/group name",
       "platform": "facebook | discord | nextdoor | reddit | other",
       "member_count": "estimated count string or null",
       "rationale": "Why share here (1 sentence)",
       "link": "Direct link if known"
-    }}
-  ],
-  "scorecard": {{
+    }
+  ]'''
+        )
+        instructions.append("For communities, return only the most relevant groups for early validation.")
+
+    schema_parts.append(
+        '''"scorecard": {
     "waitlist_target": number,
     "survey_target": 50,
     "switch_pct_target": 60,
-    "price_tolerance_target": "Above $X (minimum viable price)"
-  }}
-}}
+    "price_tolerance_target": "Above $X (minimum viable price)",
+    "paid_signups_target": 5,
+    "ltv_cac_ratio_target": 3.0
+  }'''
+    )
+    instructions.append("Always include scorecard targets tailored to the requested channels.")
 
-Generate exactly 7 survey questions in this order:
-1. Frequency of current purchases
-2. Current solution / where they go now
-3. Biggest frustration (open text)
-4. Willingness to switch (yes/no/maybe)
-5. Price sensitivity (range options)
-6. Location preference (multiple choice)
-7. Email capture for launch updates"""
+    schema = "{\n  " + ",\n  ".join(schema_parts) + "\n}"
+    instruction_block = "\n".join(f"- {item}" for item in instructions)
+
+    return f"""Generate demand validation materials for a {business_type} in {city}, {state}.
+
+CRITICAL: Only generate the requested outputs. Do not invent extra sections outside the JSON schema below.
+CRITICAL: Use the EXACT pain language from the customer quotes provided. The copy should sound like the customers, not like a marketer.
+
+Return JSON matching exactly this schema:
+{schema}
+
+Additional instructions:
+{instruction_block}"""
 
 
 def validate_user(
@@ -849,6 +891,15 @@ def validate_user(
     channels: list[str],
 ) -> str:
     pain_quotes = "\n".join(f'  - "{q}"' for q in pain_language[:10])
+    channel_notes = []
+    if "landing_page" in channels:
+        channel_notes.append("landing_page: optimize for signups and message clarity")
+    if "survey" in channels:
+        channel_notes.append("survey: focus on demand qualification and willingness to switch")
+    if "whatsapp" in channels:
+        channel_notes.append("whatsapp_message: make it easy to copy, paste, and forward")
+    if "communities" in channels:
+        channel_notes.append("communities: prefer places where the target customer already gathers")
 
     return f"""Generate validation materials for:
 
@@ -868,4 +919,9 @@ Launch plan context:
 Community search results:
 {community_search_data}
 
-Selected channels: {', '.join(channels)}"""
+Selected channels: {', '.join(channels)}
+
+Output guidance:
+{chr(10).join(f"- {note}" for note in channel_notes)}
+
+Do not generate assets for channels that were not selected."""

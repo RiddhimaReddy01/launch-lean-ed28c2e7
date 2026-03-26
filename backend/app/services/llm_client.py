@@ -2,7 +2,9 @@
 Unified LLM client with automatic fallback:
   1. Groq (configurable model via GROQ_MODEL env var) - primary, fastest
   2. Google Gemini Flash - fallback
-  3. Raises AllProvidersExhaustedError if both fail
+  3. OpenRouter - fallback
+  4. Hugging Face - fallback
+  5. Raises AllProvidersExhaustedError if all configured providers fail
 
 Available Groq models (free tier):
   - llama-3.3-70b-versatile (default)
@@ -249,9 +251,7 @@ async def _call_hf(
     max_tokens: int,
     json_mode: bool,
 ) -> str:
-    """
-    Call Hugging Face Inference API for Llama 3 70B instruct (via free token).
-    """
+    """Call the Hugging Face chat-completions API."""
     model = "meta-llama/Llama-3.2-3B-Instruct"
     payload = {
         "inputs": [

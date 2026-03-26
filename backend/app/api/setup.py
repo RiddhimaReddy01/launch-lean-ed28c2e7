@@ -59,7 +59,11 @@ async def setup_section(
             cost_tiers=setup_data["cost_tiers"],
             suppliers=setup_data["suppliers"],
             team=setup_data["team"],
-            timeline=setup_data["timeline"]
+            timeline=setup_data["timeline"],
+            recommendation=setup_data.get("recommendation"),
+            revenue_projection=setup_data.get("revenue_projection"),
+            founder_time_allocation=setup_data.get("founder_time_allocation", []),
+            vendor_benchmarks=setup_data.get("vendor_benchmarks", []),
         )
 
         logger.info(f"[SETUP] Success: {len(response.cost_tiers)} tiers, {len(response.suppliers)} suppliers, "

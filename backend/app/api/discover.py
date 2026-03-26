@@ -6,12 +6,15 @@ Pipeline: Data ingestion → Cleaning → Merging → Insight generation → Res
 
 import logging
 import json
+import re
+from collections import Counter
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import optional_user
 from app.services.llm_client import call_llm
 from app.schemas.models import (
-    DiscoverRequest, DiscoverResponse, Insight, Evidence, SourceSummary,
+    DiscoverRequest, DiscoverResponse, Insight, Evidence, SourceSummary, DiscoverSummary,
 )
 from app.services.reddit_scraper import fetch_search_posts, extract_post_fields
 from app.services.google_search import run_search_queries, build_discover_queries
@@ -102,7 +105,7 @@ async def discover_insights(
         merged_sampled, business_type, city, state
     )
 
-    response = _post_process(llm_insights, sources)
+    response = _post_process(llm_insights, sources, merged, city, state)
 
     # ✅ STORE IN DATABASE CACHE for future similar queries
     await cache_discover(business_type, city, state, response)
@@ -110,7 +113,7 @@ async def discover_insights(
     return response
 
 
-def _post_process(scored_data: dict, sources: list[dict]) -> DiscoverResponse:
+def _post_process(scored_data: dict, sources: list[dict], merged_posts: list[dict], city: str, state: str) -> DiscoverResponse:
     """Format insights into response model with LLM-extracted signal values."""
     raw_insights = scored_data.get("insights", [])
 
@@ -177,8 +180,173 @@ def _post_process(scored_data: dict, sources: list[dict]) -> DiscoverResponse:
     insights.sort(key=lambda x: x.score, reverse=True)
 
     source_models = [SourceSummary(**s) for s in sources]
+    summary = _build_discover_summary(raw_insights, insights, merged_posts, city, state)
 
-    return DiscoverResponse(sources=source_models, insights=insights)
+    return DiscoverResponse(sources=source_models, insights=insights, summary=summary)
+
+
+def _build_discover_summary(
+    raw_insights: list[dict],
+    insights: list[Insight],
+    merged_posts: list[dict],
+    city: str,
+    state: str,
+) -> DiscoverSummary:
+    if not insights:
+        return DiscoverSummary(
+            demand_strength=0.0,
+            signal_density="low",
+            trend_direction="stable",
+            trend_label="Stable",
+            top_regions=[label for label in [city, state] if label][:2],
+            mixed_signals=[],
+            summary="Limited demand evidence available yet.",
+        )
+
+    avg_score = sum(i.score for i in insights) / len(insights)
+    avg_mentions = sum(max(i.mention_count, 1) for i in insights) / len(insights)
+    avg_intensity = sum(i.intensity_score for i in insights) / len(insights)
+    avg_wtp = sum(i.willingness_to_pay_score for i in insights) / len(insights)
+    platform_diversity = len({platform for i in insights for platform in i.source_platforms})
+
+    demand_strength = round(min(10.0, (avg_score * 0.6) + (avg_intensity * 0.25) + (avg_wtp * 0.15)), 1)
+
+    density_score = avg_mentions + (platform_diversity * 1.2)
+    if density_score >= 10:
+        signal_density = "high"
+    elif density_score >= 6:
+        signal_density = "medium"
+    else:
+        signal_density = "low"
+
+    trend_direction, trend_label = _calculate_trend_direction(raw_insights, merged_posts)
+    top_regions = _extract_top_regions(merged_posts, city, state)
+    mixed_signals = _detect_mixed_signals(insights, raw_insights)
+
+    summary = (
+        f"Demand strength {demand_strength}/10 with {signal_density} signal density. "
+        f"Trend is {trend_label.lower()}."
+    )
+    if mixed_signals:
+        summary += f" Mixed signals detected: {mixed_signals[0]}"
+
+    return DiscoverSummary(
+        demand_strength=demand_strength,
+        signal_density=signal_density,
+        trend_direction=trend_direction,
+        trend_label=trend_label,
+        top_regions=top_regions,
+        mixed_signals=mixed_signals,
+        summary=summary,
+    )
+
+
+def _calculate_trend_direction(raw_insights: list[dict], merged_posts: list[dict]) -> tuple[str, str]:
+    urgency_values = []
+    for raw in raw_insights:
+        try:
+            urgency_values.append(float(raw.get("urgency", 0)))
+        except (TypeError, ValueError):
+            continue
+
+    recent_posts = 0
+    dated_posts = 0
+    now = datetime.now(timezone.utc)
+    for post in merged_posts:
+        parsed = _parse_date(post.get("created_date"))
+        if not parsed:
+            continue
+        dated_posts += 1
+        age_days = (now - parsed).days
+        if age_days <= 180:
+            recent_posts += 1
+
+    urgency_avg = sum(urgency_values) / len(urgency_values) if urgency_values else 0
+    recent_ratio = (recent_posts / dated_posts) if dated_posts else 0
+
+    if urgency_avg >= 7 or recent_ratio >= 0.55:
+        return "growing", "Growing (last 6 months)"
+    if urgency_avg <= 3 and recent_ratio < 0.2:
+        return "declining", "Cooling"
+    return "stable", "Stable"
+
+
+def _parse_date(value: str | None):
+    if not value:
+        return None
+    for candidate in (
+        str(value).replace("Z", "+00:00"),
+        f"{value}T00:00:00+00:00" if isinstance(value, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) else None,
+    ):
+        if not candidate:
+            continue
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
+def _extract_top_regions(merged_posts: list[dict], city: str, state: str) -> list[str]:
+    region_patterns = {
+        "Austin": r"\baustin\b",
+        "Dallas": r"\bdallas\b",
+        "Plano": r"\bplano\b",
+        "Houston": r"\bhouston\b",
+        "San Francisco": r"\bsan francisco\b|\bsf\b",
+        "New York": r"\bnew york\b|\bnyc\b",
+        "Los Angeles": r"\blos angeles\b|\bla\b",
+        "Chicago": r"\bchicago\b",
+        "Seattle": r"\bseattle\b",
+    }
+
+    counts: Counter[str] = Counter()
+    for post in merged_posts:
+        text = " ".join(
+            str(post.get(field, "") or "")
+            for field in ("title", "body", "snippet", "query")
+        ).lower()
+        for region, pattern in region_patterns.items():
+            if re.search(pattern, text):
+                counts[region] += 1
+
+    if city:
+        counts[city] += 2
+    if state and state not in counts:
+        counts[state] += 1
+
+    regions = [region for region, _ in counts.most_common(3)]
+    if not regions:
+        regions = [label for label in [city, state] if label]
+    return regions[:3]
+
+
+def _detect_mixed_signals(insights: list[Insight], raw_insights: list[dict]) -> list[str]:
+    if not insights:
+        return []
+
+    avg_intensity = sum(i.intensity_score for i in insights) / len(insights)
+    avg_wtp = sum(i.willingness_to_pay_score for i in insights) / len(insights)
+    trend_count = sum(1 for i in insights if i.type == "trend")
+    pain_count = sum(1 for i in insights if i.type == "pain_point")
+    gap_count = sum(1 for i in insights if i.type == "market_gap")
+
+    mixed_signals: list[str] = []
+    if avg_intensity >= 6.5 and avg_wtp <= 4.5:
+        mixed_signals.append("High demand intensity but weak willingness to pay")
+    if trend_count > 0 and pain_count == 0:
+        mixed_signals.append("Growing discussion but limited hard pain evidence")
+    if gap_count > 0 and avg_wtp < 5:
+        mixed_signals.append("Clear market gaps but monetization is still uncertain")
+
+    low_confidence = sum(1 for raw in raw_insights if str(raw.get("confidence", "medium")).lower() == "low")
+    if low_confidence >= max(1, len(raw_insights) // 3):
+        mixed_signals.append("Some signals are directional rather than high-confidence proof")
+
+    return mixed_signals[:3]
 
 
 def _sample_posts(posts: list[dict], budget: int, per_group: int) -> list[dict]:
@@ -296,7 +464,7 @@ async def _extract_insights_with_signals(
             temperature=0.4,  # Moderate - balance consistency with insight discovery
             max_tokens=1200,  # Keep response compact for lower latency
             json_mode=True,
-            preferred_provider="gemini",
+            preferred_provider="groq",
         )
 
         # Parse LLM response

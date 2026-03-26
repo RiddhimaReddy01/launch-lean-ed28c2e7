@@ -11,7 +11,7 @@ from app.core.auth import optional_user
 from app.schemas.models import (
     ValidateRequest, ValidateResponse,
     LandingPage, Survey, SurveyQuestion,
-    WhatsAppMessage, Community, Scorecard,
+    WhatsAppMessage, Community, Scorecard, ValidationStrategy,
 )
 from app.services.llm_client import call_llm, AllProvidersExhaustedError
 from app.services.google_search import run_search_queries, build_community_queries
@@ -111,7 +111,7 @@ async def generate_validation(
     )
 
     # ═══ STAGE 4: LLM LOGIC ═══
-    system = validate_system(btype, city, state)
+    system = validate_system(btype, city, state, channels)
     user_prompt = validate_user(
         decomposition=decomp,
         insight=insight,
@@ -305,12 +305,21 @@ def _post_process(raw: dict, channels: list[str]) -> ValidateResponse:
         is_custom=bool(sc.get("is_custom", False)),
     )
 
+    strategy = _build_validation_strategy(channels, scorecard)
+    expected_outcomes = _build_expected_outcomes(channels, scorecard)
+    simulation = _build_simulation(channels, scorecard)
+    recommended_sequence = _build_recommended_sequence(channels)
+
     return ValidateResponse(
         landing_page=landing_page,
         survey=survey,
         whatsapp_message=whatsapp,
         communities=communities,
         scorecard=scorecard,
+        strategy=strategy,
+        expected_outcomes=expected_outcomes,
+        simulation=simulation,
+        recommended_sequence=recommended_sequence,
     )
 
 
@@ -324,3 +333,103 @@ def _normalize_platform(p: str) -> str:
     valid = {"facebook", "discord", "nextdoor", "reddit", "linkedin", "whatsapp", "other"}
     p = p.lower().strip()
     return p if p in valid else "other"
+
+
+def _build_validation_strategy(channels: list[str], scorecard: Scorecard) -> ValidationStrategy:
+    methods = []
+    if "landing_page" in channels:
+        methods.append("Landing page")
+    if "survey" in channels:
+        methods.append("Survey")
+    if "whatsapp" in channels:
+        methods.append("Direct outreach")
+    if "communities" in channels:
+        methods.append("Community seeding")
+
+    if "landing_page" in channels and "survey" in channels:
+        typical_conversion = 0.05
+    elif "landing_page" in channels:
+        typical_conversion = 0.04
+    else:
+        typical_conversion = 0.03
+
+    return ValidationStrategy(
+        business_model="Demand validation",
+        recommended_methods=methods,
+        effort_estimate_hours=max(6, len(methods) * 4),
+        timeline_weeks=max(1, len(methods)),
+        typical_conversion_rate=typical_conversion,
+        typical_cac=round(max(5.0, scorecard.price_tolerance_target * 0.8), 1),
+        description="Run the highest-signal test first, then add qualification and outreach once response quality is clear.",
+    )
+
+
+def _build_expected_outcomes(channels: list[str], scorecard: Scorecard) -> dict:
+    outcomes = {}
+    if "landing_page" in channels:
+        outcomes["landing_page"] = {
+            "ctr": "10-15%",
+            "conversion": "3-5%",
+            "primary_goal": f"{scorecard.waitlist_target}+ signups",
+        }
+    if "survey" in channels:
+        outcomes["survey"] = {
+            "completion_rate": "60-75%",
+            "qualified_demand": f"{scorecard.switch_pct_target}%+ positive switch intent",
+            "primary_goal": f"{scorecard.survey_target}+ completed responses",
+        }
+    if "whatsapp" in channels:
+        outcomes["whatsapp"] = {
+            "reply_rate": "15-25%",
+            "conversion": "20-30% of replies become qualified conversations",
+            "primary_goal": "10+ replies from 50 messages",
+        }
+    if "communities" in channels:
+        outcomes["communities"] = {
+            "engagement_rate": "5-10%",
+            "conversion": "3+ communities show positive traction",
+            "primary_goal": "Identify repeatable acquisition channels",
+        }
+    return outcomes
+
+
+def _build_simulation(channels: list[str], scorecard: Scorecard) -> dict:
+    visitors = 1000 if "landing_page" in channels else 300
+    signup_rate = 0.12 if "landing_page" in channels else 0.08
+    signups = int(visitors * signup_rate)
+
+    simulation = {
+        "starting_audience": visitors,
+        "expected_signups": signups,
+        "expected_paid_conversions": max(scorecard.paid_signups_target, int(signups * 0.25)),
+        "notes": [],
+    }
+    if "landing_page" in channels:
+        simulation["notes"].append(f"If {visitors} visitors arrive, expect about {signups} signups.")
+    if "survey" in channels:
+        responses = max(scorecard.survey_target, int(signups * 0.5))
+        simulation["expected_survey_responses"] = responses
+        simulation["notes"].append(f"That should produce roughly {responses} completed surveys.")
+    if "whatsapp" in channels or "communities" in channels:
+        messages = 50
+        replies = 10 if "whatsapp" in channels else 6
+        simulation["outreach_messages"] = messages
+        simulation["expected_replies"] = replies
+        simulation["notes"].append(f"Sending {messages} targeted messages should yield around {replies} meaningful replies.")
+    return simulation
+
+
+def _build_recommended_sequence(channels: list[str]) -> list[str]:
+    sequence = []
+    if "landing_page" in channels:
+        sequence.append("Step 1: Launch the landing page and measure visitor-to-signup conversion.")
+    if "survey" in channels:
+        sequence.append("Step 2: Send the survey to new signups and qualified interest leads.")
+    if "whatsapp" in channels:
+        sequence.append("Step 3: Run direct outreach with the best-performing hook from earlier tests.")
+    if "communities" in channels:
+        step_num = len(sequence) + 1
+        sequence.append(f"Step {step_num}: Test distribution in communities and compare response quality by channel.")
+    if not sequence:
+        sequence.append("Step 1: Start with scorecard-based validation and benchmark whether stronger demand signals emerge.")
+    return sequence

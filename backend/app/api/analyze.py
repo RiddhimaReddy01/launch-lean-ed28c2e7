@@ -9,6 +9,8 @@ Accepts two request formats:
 """
 
 import logging
+from copy import deepcopy
+import math
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import optional_user
@@ -122,7 +124,11 @@ async def analyze_section(
     except AllProvidersExhaustedError:
         raise HTTPException(status_code=503, detail="All LLM providers unavailable")
 
-    return AnalyzeResponse(section=section, data=data)
+    synthesis = _build_analysis_synthesis(section, data, req.prior_context, insight, decomp)
+    if synthesis and section == "opportunity":
+        data = {**data, "synthesis": synthesis}
+
+    return AnalyzeResponse(section=section, data=data, synthesis=synthesis)
 
 
 # ═══ SECTION HANDLERS ═══
@@ -153,7 +159,7 @@ async def _handle_opportunity(
     system = analyze_opportunity_system(btype, city, state, metro)
     user_prompt = analyze_section_user("opportunity", insight, decomp, market_context)
 
-    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000, preferred_provider="openrouter")
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000, preferred_provider="groq")
 
     # Post-processing: validate TAM > SAM > SOM
     tam_val = _extract_value(raw, "tam")
@@ -190,7 +196,7 @@ async def _handle_customers(
     system = analyze_customers_system(btype, city)
     user_prompt = analyze_section_user("customers", insight, decomp)
 
-    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000, preferred_provider="openrouter")
+    raw = await call_llm(system_prompt=system, user_prompt=user_prompt, temperature=0.3, max_tokens=2000, preferred_provider="groq")
 
     # Post-processing
     segments = raw.get("segments", [])
@@ -394,6 +400,14 @@ async def _handle_location(
     if raw.get("overall_viability", "").lower() not in valid_viability:
         raw["overall_viability"] = "medium"
 
+    raw["city_center"] = _city_center_point(city, state)
+    raw["focus_areas"] = _build_focus_areas(
+        raw.get("focus_areas", []),
+        city,
+        state,
+        analyses,
+    )
+
     raw["location_analysis"] = analyses
     return raw
 
@@ -442,3 +456,234 @@ def _extract_value(data: dict, key: str) -> float | None:
         except (TypeError, ValueError):
             return None
     return None
+
+
+def _build_analysis_synthesis(
+    section: str,
+    current_data: dict,
+    prior_context: dict | None,
+    insight: dict,
+    decomp: dict,
+) -> dict:
+    combined = deepcopy(prior_context or {})
+    combined[section] = current_data
+
+    opportunity = combined.get("opportunity", {})
+    customers = combined.get("customers", {})
+    competitors = combined.get("competitors", {})
+    costs = combined.get("costs", {})
+    risk = combined.get("risk", {})
+    rootcause = combined.get("rootcause", {})
+
+    som_value = float(opportunity.get("som", {}).get("value", 0) or 0)
+    customer_segments = customers.get("segments", []) or []
+    competitor_list = competitors.get("competitors", []) or []
+    unfilled_gaps = competitors.get("unfilled_gaps", []) or []
+    risk_items = risk.get("risks", []) or []
+    root_causes = rootcause.get("root_causes", []) or []
+
+    avg_pain = (
+        sum(float(seg.get("pain_intensity", 0) or 0) for seg in customer_segments) / len(customer_segments)
+        if customer_segments else float(insight.get("intensity_score", 0) or 0)
+    )
+    competitor_pressure = sum(
+        1.0 if c.get("threat_level") == "high" else 0.5 if c.get("threat_level") == "medium" else 0.2
+        for c in competitor_list
+    )
+    high_risk_count = sum(
+        1 for r in risk_items
+        if str(r.get("impact", "")).lower() == "high" or str(r.get("likelihood", "")).lower() == "high"
+    )
+    top_gap_count = min(len(unfilled_gaps), 3)
+
+    som_score = 0
+    if som_value >= 25_000_000:
+        som_score = 28
+    elif som_value >= 10_000_000:
+        som_score = 22
+    elif som_value >= 3_000_000:
+        som_score = 16
+    elif som_value > 0:
+        som_score = 10
+
+    pain_score = min(24, max(0, avg_pain * 2.4))
+    gap_score = min(18, top_gap_count * 6)
+    competition_penalty = min(18, competitor_pressure * 4)
+    risk_penalty = min(16, high_risk_count * 4)
+
+    opportunity_score = round(max(0, min(100, 32 + som_score + pain_score + gap_score - competition_penalty - risk_penalty)))
+
+    evidence_points = 0
+    if som_value:
+        evidence_points += 1
+    if customer_segments:
+        evidence_points += 1
+    if competitor_list:
+        evidence_points += 1
+    if risk_items:
+        evidence_points += 1
+    if root_causes:
+        evidence_points += 1
+    confidence = "high" if evidence_points >= 4 else "medium" if evidence_points >= 2 else "low"
+
+    repeat_customers = float(opportunity.get("funnel", {}).get("repeat_customers", 0) or 0)
+    interested = float(opportunity.get("funnel", {}).get("interested", 0) or 0)
+    retention_ratio = (repeat_customers / interested) if interested else 0
+
+    if opportunity_score >= 75 and high_risk_count <= 1:
+        final_verdict = "build"
+    elif opportunity_score <= 45 or high_risk_count >= 3:
+        final_verdict = "avoid"
+    else:
+        final_verdict = "modify"
+
+    top_drivers = _rank_top_drivers(customer_segments, unfilled_gaps, competitor_list, root_causes)
+    tradeoff_reasoning = _build_tradeoff_reasoning(avg_pain, retention_ratio, competitor_pressure, high_risk_count, unfilled_gaps)
+    sensitivity_analysis = _build_sensitivity_analysis(costs, opportunity, avg_pain)
+
+    return {
+        "final_verdict": final_verdict,
+        "opportunity_score": opportunity_score,
+        "confidence": confidence,
+        "key_insight": tradeoff_reasoning,
+        "tradeoff_reasoning": tradeoff_reasoning,
+        "top_drivers": top_drivers,
+        "sensitivity_analysis": sensitivity_analysis,
+        "summary": _build_synthesis_summary(final_verdict, opportunity_score, confidence, top_drivers, decomp),
+    }
+
+
+def _rank_top_drivers(customer_segments: list[dict], gaps: list[str], competitors: list[dict], root_causes: list[dict]) -> list[str]:
+    drivers: list[tuple[float, str]] = []
+    for seg in customer_segments[:3]:
+        pain = float(seg.get("pain_intensity", 0) or 0)
+        primary_need = seg.get("primary_need") or seg.get("name") or "Customer pain"
+        drivers.append((pain + 2, primary_need))
+    for gap in gaps[:3]:
+        drivers.append((7.5, gap))
+    low_comp_count = sum(1 for c in competitors if str(c.get("threat_level", "")).lower() == "low")
+    if low_comp_count:
+        drivers.append((6.5 + low_comp_count, "Limited strong competition in the target segment"))
+    for cause in root_causes[:2]:
+        move = cause.get("your_move") or cause.get("title") or ""
+        if move:
+            drivers.append((6.0, move))
+
+    deduped: list[str] = []
+    for _, text in sorted(drivers, key=lambda item: item[0], reverse=True):
+        normalized = text.strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped[:3]
+
+
+def _build_tradeoff_reasoning(
+    avg_pain: float,
+    retention_ratio: float,
+    competitor_pressure: float,
+    high_risk_count: int,
+    gaps: list[str],
+) -> str:
+    if avg_pain >= 7 and retention_ratio < 0.2:
+        return "High demand exists, but repeat behavior looks weak. Prioritize retention and repeat usage before scaling acquisition."
+    if avg_pain >= 7 and competitor_pressure >= 3:
+        return "Demand is real, but competitive pressure is high. Differentiation matters more than raw market size."
+    if gaps and high_risk_count <= 1:
+        return f"The clearest upside is {gaps[0]}. The business looks most attractive if you focus the launch tightly around that opening."
+    if high_risk_count >= 3:
+        return "The market has potential, but operational and execution risks are doing most of the damage right now."
+    return "The opportunity is viable, but the biggest advantage will come from disciplined positioning rather than broad expansion."
+
+
+def _build_sensitivity_analysis(costs: dict, opportunity: dict, avg_pain: float) -> list[dict]:
+    total_max = float(costs.get("total_range", {}).get("max", 0) or 0)
+    monthly_base = max(3000.0, total_max / 12 if total_max else 5000.0)
+    repeat_customers = float(opportunity.get("funnel", {}).get("repeat_customers", 0) or 0)
+    willing_to_try = float(opportunity.get("funnel", {}).get("willing_to_try", 0) or 0)
+    base_revenue = max(repeat_customers * 45, willing_to_try * 12)
+
+    cac_impact = round(((base_revenue - (monthly_base * 1.3)) - (base_revenue - monthly_base)) / max(base_revenue, 1) * 100)
+    retention_revenue = round(((base_revenue * 2.0) - base_revenue) / max(base_revenue, 1) * 100)
+    demand_drop = round((avg_pain / 10) * 25)
+
+    return [
+        {
+            "scenario": "If CAC increases by 30%",
+            "impact": f"Estimated monthly profitability drops by about {abs(cac_impact)}%",
+        },
+        {
+            "scenario": "If retention improves by 20%",
+            "impact": f"Estimated recurring revenue could increase by about {retention_revenue}%",
+        },
+        {
+            "scenario": "If demand intensity softens",
+            "impact": f"Expected conversion to repeat customers may fall by roughly {demand_drop}%",
+        },
+    ]
+
+
+def _build_synthesis_summary(verdict: str, score: int, confidence: str, top_drivers: list[str], decomp: dict) -> str:
+    business_type = decomp.get("business_type", "idea")
+    lead_driver = top_drivers[0] if top_drivers else "customer demand"
+    return (
+        f"For this {business_type}, the current recommendation is {verdict.upper()} "
+        f"with an opportunity score of {score}/100 and {confidence} confidence. "
+        f"The strongest driver is {lead_driver}."
+    )
+
+
+CITY_COORDINATES = {
+    ("plano", "texas"): (33.0198, -96.6989),
+    ("dallas", "texas"): (32.7767, -96.7970),
+    ("austin", "texas"): (30.2672, -97.7431),
+    ("houston", "texas"): (29.7604, -95.3698),
+    ("san francisco", "california"): (37.7749, -122.4194),
+    ("new york", "new york"): (40.7128, -74.0060),
+    ("chicago", "illinois"): (41.8781, -87.6298),
+    ("seattle", "washington"): (47.6062, -122.3321),
+}
+
+
+def _city_center_point(city: str, state: str) -> dict:
+    key = (str(city or "").lower(), str(state or "").lower())
+    lat, lng = CITY_COORDINATES.get(key, (39.8283, -98.5795))
+    label = ", ".join(part for part in [city, state] if part)
+    return {"lat": lat, "lng": lng, "label": label or "Target market"}
+
+
+def _build_focus_areas(focus_areas: list[dict], city: str, state: str, analyses: list[dict]) -> list[dict]:
+    center = _city_center_point(city, state)
+    names = []
+    for area in focus_areas[:4]:
+        name = area.get("name")
+        if name:
+            names.append({
+                "name": name,
+                "reason": area.get("reason", ""),
+                "emphasis": area.get("emphasis", "medium"),
+            })
+
+    if not names:
+        for idx, analysis in enumerate(analyses[:3]):
+            aspect = analysis.get("aspect", "Focus area")
+            names.append({
+                "name": f"{city} {aspect}".strip(),
+                "reason": analysis.get("opportunity") or analysis.get("recommendation") or analysis.get("observation", ""),
+                "emphasis": "high" if idx == 0 else "medium",
+            })
+
+    positioned = []
+    radii = [0.045, 0.035, 0.055, 0.028]
+    for idx, area in enumerate(names[:4]):
+        angle = (idx / max(1, len(names))) * (2 * math.pi)
+        radius = radii[idx % len(radii)]
+        lat = center["lat"] + (math.sin(angle) * radius)
+        lng = center["lng"] + (math.cos(angle) * radius)
+        positioned.append({
+            "name": area["name"],
+            "lat": round(lat, 4),
+            "lng": round(lng, 4),
+            "reason": area["reason"][:180],
+            "emphasis": area.get("emphasis", "medium"),
+        })
+    return positioned
