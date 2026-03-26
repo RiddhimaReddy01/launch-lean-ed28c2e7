@@ -122,19 +122,19 @@ def _post_process(scored_data: dict, sources: list[dict], merged_posts: list[dic
         # Extract all 4 signals from LLM (now intelligent, not hardcoded)
         mention_count = raw.get("mention_count", 0)
 
-        # Build evidence list with supporting quotes from analysis
-        evidence_list = []
+        # Build evidence list with real source URLs when available.
+        evidence_list = _build_evidence_list(raw, merged_posts)
+
         customer_quote = raw.get("customer_quote", "")
-        if customer_quote:
-            source_platforms = raw.get("source_platforms", [])
-            source = source_platforms[0] if source_platforms else "research"
+        if customer_quote and len(evidence_list) < 3:
+            matched_post = _match_post_for_quote(customer_quote, raw.get("source_platforms", []), merged_posts)
             evidence_list.append(Evidence(
                 quote=customer_quote,
-                source=source,
-                source_url="",
-                score=0,
-                upvotes=None,
-                date=None,
+                source=_normalize_evidence_source(matched_post, raw.get("source_platforms", [])),
+                source_url=_extract_post_url(matched_post),
+                score=_extract_post_score(matched_post),
+                upvotes=_extract_post_upvotes(matched_post),
+                date=_extract_post_date(matched_post),
             ))
 
         explanation = raw.get("explanation", "")
@@ -183,6 +183,128 @@ def _post_process(scored_data: dict, sources: list[dict], merged_posts: list[dic
     summary = _build_discover_summary(raw_insights, insights, merged_posts, city, state)
 
     return DiscoverResponse(sources=source_models, insights=insights, summary=summary)
+
+
+def _build_evidence_list(raw: dict, merged_posts: list[dict]) -> list[Evidence]:
+    evidence_list: list[Evidence] = []
+    raw_evidence = raw.get("evidence", [])
+
+    if not isinstance(raw_evidence, list):
+        return evidence_list
+
+    for item in raw_evidence[:3]:
+        if not isinstance(item, dict):
+            continue
+        quote = str(item.get("quote", "") or "").strip()
+        if not quote:
+            continue
+
+        matched_post = _match_post_for_quote(quote, [item.get("source", "")], merged_posts)
+        evidence_list.append(Evidence(
+            quote=quote,
+            source=_normalize_evidence_source(matched_post, [item.get("source", "")]),
+            source_url=_extract_post_url(matched_post),
+            score=_extract_post_score(matched_post) or int(item.get("score", 0) or 0),
+            upvotes=_extract_post_upvotes(matched_post),
+            date=_extract_post_date(matched_post),
+        ))
+
+    return evidence_list
+
+
+def _match_post_for_quote(quote: str, source_hints: list[str], merged_posts: list[dict]) -> dict | None:
+    quote_norm = _normalize_match_text(quote)
+    if not quote_norm:
+        return None
+
+    normalized_hints = {str(hint or "").lower() for hint in source_hints if hint}
+    scored_matches: list[tuple[int, dict]] = []
+
+    for post in merged_posts:
+        haystack = " ".join(
+            str(post.get(field, "") or "")
+            for field in ("title", "body", "snippet")
+        )
+        haystack_norm = _normalize_match_text(haystack)
+        if not haystack_norm:
+            continue
+
+        if quote_norm in haystack_norm or haystack_norm in quote_norm:
+            score = 3
+        else:
+            shared_terms = set(quote_norm.split()) & set(haystack_norm.split())
+            if len(shared_terms) < 5:
+                continue
+            score = len(shared_terms)
+
+        if normalized_hints:
+            post_hints = {
+                str(post.get("source", "") or "").lower(),
+                str(post.get("platform", "") or "").lower(),
+                str(post.get("subreddit", "") or "").lower(),
+                str(post.get("domain", "") or "").lower(),
+            }
+            if normalized_hints & post_hints:
+                score += 5
+
+        scored_matches.append((score, post))
+
+    if not scored_matches:
+        return None
+
+    scored_matches.sort(key=lambda item: item[0], reverse=True)
+    return scored_matches[0][1]
+
+
+def _normalize_match_text(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", value.lower())).strip()
+
+
+def _normalize_evidence_source(post: dict | None, source_hints: list[str]) -> str:
+    if post:
+        return (
+            post.get("subreddit")
+            or post.get("platform")
+            or post.get("domain")
+            or post.get("source")
+            or "research"
+        )
+    for hint in source_hints:
+        if hint:
+            return str(hint)
+    return "research"
+
+
+def _extract_post_url(post: dict | None) -> str:
+    if not post:
+        return ""
+    permalink = str(post.get("permalink", "") or "")
+    if permalink:
+        if permalink.startswith("http"):
+            return permalink
+        return f"https://reddit.com{permalink}"
+    return str(post.get("link", "") or "")
+
+
+def _extract_post_score(post: dict | None) -> int:
+    if not post:
+        return 0
+    try:
+        return int(post.get("score", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _extract_post_upvotes(post: dict | None) -> int | None:
+    if not post or post.get("source") != "reddit":
+        return None
+    return _extract_post_score(post)
+
+
+def _extract_post_date(post: dict | None) -> str | None:
+    if not post:
+        return None
+    return post.get("created_date")
 
 
 def _build_discover_summary(
