@@ -4,6 +4,7 @@ Enables persistence and multi-user benefit of cached insights.
 """
 
 import logging
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from supabase import create_client
@@ -13,7 +14,32 @@ from app.schemas.models import DecomposeResponse, DiscoverResponse
 
 logger = logging.getLogger(__name__)
 
-_search_cache_store: dict[str, tuple[float, list[dict]]] = {}
+_SEARCH_CACHE_MAX = 128
+
+class _BoundedCache:
+    """LRU dict with a hard cap to prevent unbounded memory growth."""
+
+    def __init__(self, maxsize: int = _SEARCH_CACHE_MAX):
+        self._store: OrderedDict[str, tuple[float, list[dict]]] = OrderedDict()
+        self._maxsize = maxsize
+
+    def get(self, key: str):
+        item = self._store.get(key)
+        if item is not None:
+            self._store.move_to_end(key)
+        return item
+
+    def set(self, key: str, value: tuple[float, list[dict]]):
+        if key in self._store:
+            self._store.move_to_end(key)
+        self._store[key] = value
+        while len(self._store) > self._maxsize:
+            self._store.popitem(last=False)
+
+    def pop(self, key: str):
+        self._store.pop(key, None)
+
+_search_cache_store = _BoundedCache()
 
 # Initialize Supabase client
 try:
@@ -198,13 +224,12 @@ async def get_cached_search(
     Get cached search results by query hash.
     Returns None if cache miss, expired, or table doesn't exist.
     """
-    # Fast in-memory cache first for the current service instance.
     mem_item = _search_cache_store.get(query_hash)
     if mem_item:
         expires_at_ts, cached_results = mem_item
         if datetime.now(timezone.utc).timestamp() <= expires_at_ts:
             return cached_results
-        _search_cache_store.pop(query_hash, None)
+        _search_cache_store.pop(query_hash)
 
     if not supabase:
         return None
@@ -228,10 +253,7 @@ async def get_cached_search(
             return None
 
         results = result.data.get("results", [])
-        _search_cache_store[query_hash] = (
-            expires_at.timestamp(),
-            results,
-        )
+        _search_cache_store.set(query_hash, (expires_at.timestamp(), results))
         return results
 
     except Exception as e:
@@ -248,10 +270,7 @@ async def cache_search_results(
 ):
     """Store search results in cache (gracefully handles missing table)."""
     expires_at = datetime.now(timezone.utc) + timedelta(days=ttl_days)
-    _search_cache_store[query_hash] = (
-        expires_at.timestamp(),
-        results,
-    )
+    _search_cache_store.set(query_hash, (expires_at.timestamp(), results))
 
     if not supabase:
         return
@@ -273,7 +292,7 @@ async def cache_search_results(
 
 async def delete_search_cache(query_hash: str):
     """Delete expired search cache entry."""
-    _search_cache_store.pop(query_hash, None)
+    _search_cache_store.pop(query_hash)
 
     if not supabase:
         return

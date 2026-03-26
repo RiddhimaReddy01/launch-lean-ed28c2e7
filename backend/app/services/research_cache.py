@@ -6,15 +6,10 @@ When user analyzes same idea again, return cached results instantly.
 import logging
 import json
 from datetime import datetime, timedelta
-from supabase import create_client
 
-from app.core.config import settings
+from app.core.supabase import get_supabase
 
 logger = logging.getLogger(__name__)
-
-
-def get_supabase():
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
 
 async def get_cached_research(idea_hash: str, user_id: str) -> dict | None:
